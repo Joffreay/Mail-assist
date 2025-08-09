@@ -40,8 +40,11 @@
 
                 <label class="ms-font-m" for="prompt-input">Prompt</label>
                 <textarea id="prompt-input" rows="5" placeholder="Votre question..." class="input"></textarea>
-
-                <button id="send-prompt" class="btn-primary">Envoyer à ChatGPT</button>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button id="send-prompt" class="btn-primary">Envoyer à ChatGPT</button>
+                    <button id="add-mail-content" class="btn-secondary">Ajouter le contenu du mail au prompt</button>
+                    <button id="add-mail-categories" class="btn-secondary">Ajouter les catégories du mail</button>
+                </div>
             </div>
 
             <div class="section">

@@ -122,6 +122,17 @@ b {
 
 .btn-primary:hover { background: #0a67b0; }
 
+.btn-secondary {
+  background: #e7f3ff;
+  color: #0a67b0;
+  border: 1px solid #b6dcff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.btn-secondary:hover { background: #d6ebff; }
+
 .output {
   white-space: pre-wrap;
   background: #f5f7fb;
