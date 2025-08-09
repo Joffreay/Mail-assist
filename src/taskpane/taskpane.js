@@ -9,11 +9,7 @@ Office.onReady((info) => {
   if (info.host === Office.HostType.Outlook) {
     document.getElementById("sideload-msg").style.display = "none";
     document.getElementById("app-body").style.display = "flex";
-    // Afficher Hello world à l'ouverture
-    const hello = document.getElementById("hello-text");
-    if (hello) {
-      hello.textContent = "Hello world";
-    }
+    
     document.getElementById("run").onclick = run;
 
     const apiKeyInput = document.getElementById("api-key");
@@ -22,6 +18,7 @@ Office.onReady((info) => {
     const addMailBtn = document.getElementById("add-mail-content");
     const addCategoriesBtn = document.getElementById("add-mail-categories");
     const output = document.getElementById("response-output");
+    const autoReplyBtn = document.getElementById("auto-reply");
     const listEventsBtn = document.getElementById("list-events");
     const msalClientIdInput = document.getElementById("msal-client-id");
     const eventsOutput = document.getElementById("events-output");
@@ -74,6 +71,73 @@ Office.onReady((info) => {
           output.textContent = `Erreur: ${e?.message || e}`;
         }
       });
+
+      // Générer une réponse et ouvrir une réponse préremplie
+      if (autoReplyBtn) {
+        autoReplyBtn.addEventListener("click", async () => {
+          try {
+            const apiKey = apiKeyInput.value.trim();
+            if (!apiKey) {
+              output.textContent = "Veuillez saisir la clé API avant de générer la réponse.";
+              return;
+            }
+            const item = Office.context.mailbox.item;
+            const subject = item?.subject || "";
+            let bodyText = "";
+            // Récupère le corps au format texte
+            await new Promise((resolve, reject) => {
+              item.body.getAsync(Office.CoercionType.Text, (res) => {
+                if (res.status === Office.AsyncResultStatus.Succeeded) {
+                  bodyText = res.value || "";
+                  resolve();
+                } else {
+                  reject(res.error);
+                }
+              });
+            });
+
+            output.textContent = "Génération de la réponse...";
+            const prompt = `Tu es un assistant qui rédige des réponses d'email courtes, polies et en français.\n\nSujet: ${subject}\n\nContenu:\n${bodyText}\n\nRédige une réponse appropriée en gardant un ton professionnel, commence par un salut et termine par une formule de politesse.`;
+
+            const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify({
+                model: "gpt-3.5-turbo",
+                messages: [
+                  { role: "system", content: "You are a helpful assistant." },
+                  { role: "user", content: prompt },
+                ],
+                temperature: 0.6,
+              }),
+            });
+            if (!resp.ok) {
+              const errText = await resp.text();
+              output.textContent = `Erreur API (${resp.status}): ${errText}`;
+              return;
+            }
+            const data = await resp.json();
+            const draft = data?.choices?.[0]?.message?.content || "";
+
+            // Ouvrir une réponse pré-remplie
+            await new Promise((resolve, reject) => {
+              item.displayReplyForm(draft, (asyncResult) => {
+                if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+                  resolve();
+                } else {
+                  reject(asyncResult.error);
+                }
+              });
+            });
+            output.textContent = "Réponse générée et placée dans un brouillon de réponse.";
+          } catch (e) {
+            output.textContent = `Erreur lors de la réponse automatique: ${e?.message || e}`;
+          }
+        });
+      }
 
       // Insérer le contenu du mail en cours dans le prompt
       if (addMailBtn) {

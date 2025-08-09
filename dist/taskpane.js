@@ -2,23 +2,13 @@
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
-/***/ "./assets/logo-filled.png":
-/*!********************************!*\
-  !*** ./assets/logo-filled.png ***!
-  \********************************/
-/***/ (function(module, __unused_webpack_exports, __webpack_require__) {
-
-module.exports = __webpack_require__.p + "assets/logo-filled.png";
-
-/***/ }),
-
 /***/ "./src/taskpane/taskpane.css":
 /*!***********************************!*\
   !*** ./src/taskpane/taskpane.css ***!
   \***********************************/
 /***/ (function(module, __unused_webpack_exports, __webpack_require__) {
 
-module.exports = __webpack_require__.p + "81d2cb881530cbb00e6e.css";
+module.exports = __webpack_require__.p + "81e289566de3ba43da90.css";
 
 /***/ })
 
@@ -174,11 +164,6 @@ Office.onReady(function (info) {
   if (info.host === Office.HostType.Outlook) {
     document.getElementById("sideload-msg").style.display = "none";
     document.getElementById("app-body").style.display = "flex";
-    // Afficher Hello world à l'ouverture
-    var hello = document.getElementById("hello-text");
-    if (hello) {
-      hello.textContent = "Hello world";
-    }
     document.getElementById("run").onclick = run;
     var apiKeyInput = document.getElementById("api-key");
     var promptInput = document.getElementById("prompt-input");
@@ -186,6 +171,7 @@ Office.onReady(function (info) {
     var addMailBtn = document.getElementById("add-mail-content");
     var addCategoriesBtn = document.getElementById("add-mail-categories");
     var output = document.getElementById("response-output");
+    var autoReplyBtn = document.getElementById("auto-reply");
     var listEventsBtn = document.getElementById("list-events");
     var msalClientIdInput = document.getElementById("msal-client-id");
     var eventsOutput = document.getElementById("events-output");
@@ -267,18 +253,113 @@ Office.onReady(function (info) {
         }, _callee, null, [[1, 6]]);
       })));
 
-      // Insérer le contenu du mail en cours dans le prompt
-      if (addMailBtn) {
-        addMailBtn.addEventListener("click", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-          var item, subject, bodyText, separator, _t2;
+      // Générer une réponse et ouvrir une réponse préremplie
+      if (autoReplyBtn) {
+        autoReplyBtn.addEventListener("click", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
+          var _data$choices2, apiKey, item, subject, bodyText, prompt, resp, errText, data, draft, _t2;
           return _regenerator().w(function (_context2) {
             while (1) switch (_context2.p = _context2.n) {
               case 0:
                 _context2.p = 0;
+                apiKey = apiKeyInput.value.trim();
+                if (apiKey) {
+                  _context2.n = 1;
+                  break;
+                }
+                output.textContent = "Veuillez saisir la clé API avant de générer la réponse.";
+                return _context2.a(2);
+              case 1:
                 item = Office.context.mailbox.item;
                 subject = (item === null || item === void 0 ? void 0 : item.subject) || "";
                 bodyText = ""; // Récupère le corps au format texte
-                _context2.n = 1;
+                _context2.n = 2;
+                return new Promise(function (resolve, reject) {
+                  item.body.getAsync(Office.CoercionType.Text, function (res) {
+                    if (res.status === Office.AsyncResultStatus.Succeeded) {
+                      bodyText = res.value || "";
+                      resolve();
+                    } else {
+                      reject(res.error);
+                    }
+                  });
+                });
+              case 2:
+                output.textContent = "Génération de la réponse...";
+                prompt = "Tu es un assistant qui r\xE9dige des r\xE9ponses d'email courtes, polies et en fran\xE7ais.\n\nSujet: ".concat(subject, "\n\nContenu:\n").concat(bodyText, "\n\nR\xE9dige une r\xE9ponse appropri\xE9e en gardant un ton professionnel, commence par un salut et termine par une formule de politesse.");
+                _context2.n = 3;
+                return fetch("https://api.openai.com/v1/chat/completions", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: "Bearer ".concat(apiKey)
+                  },
+                  body: JSON.stringify({
+                    model: "gpt-3.5-turbo",
+                    messages: [{
+                      role: "system",
+                      content: "You are a helpful assistant."
+                    }, {
+                      role: "user",
+                      content: prompt
+                    }],
+                    temperature: 0.6
+                  })
+                });
+              case 3:
+                resp = _context2.v;
+                if (resp.ok) {
+                  _context2.n = 5;
+                  break;
+                }
+                _context2.n = 4;
+                return resp.text();
+              case 4:
+                errText = _context2.v;
+                output.textContent = "Erreur API (".concat(resp.status, "): ").concat(errText);
+                return _context2.a(2);
+              case 5:
+                _context2.n = 6;
+                return resp.json();
+              case 6:
+                data = _context2.v;
+                draft = (data === null || data === void 0 || (_data$choices2 = data.choices) === null || _data$choices2 === void 0 || (_data$choices2 = _data$choices2[0]) === null || _data$choices2 === void 0 || (_data$choices2 = _data$choices2.message) === null || _data$choices2 === void 0 ? void 0 : _data$choices2.content) || ""; // Ouvrir une réponse pré-remplie
+                _context2.n = 7;
+                return new Promise(function (resolve, reject) {
+                  item.displayReplyForm(draft, function (asyncResult) {
+                    if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+                      resolve();
+                    } else {
+                      reject(asyncResult.error);
+                    }
+                  });
+                });
+              case 7:
+                output.textContent = "Réponse générée et placée dans un brouillon de réponse.";
+                _context2.n = 9;
+                break;
+              case 8:
+                _context2.p = 8;
+                _t2 = _context2.v;
+                output.textContent = "Erreur lors de la r\xE9ponse automatique: ".concat((_t2 === null || _t2 === void 0 ? void 0 : _t2.message) || _t2);
+              case 9:
+                return _context2.a(2);
+            }
+          }, _callee2, null, [[0, 8]]);
+        })));
+      }
+
+      // Insérer le contenu du mail en cours dans le prompt
+      if (addMailBtn) {
+        addMailBtn.addEventListener("click", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
+          var item, subject, bodyText, separator, _t3;
+          return _regenerator().w(function (_context3) {
+            while (1) switch (_context3.p = _context3.n) {
+              case 0:
+                _context3.p = 0;
+                item = Office.context.mailbox.item;
+                subject = (item === null || item === void 0 ? void 0 : item.subject) || "";
+                bodyText = ""; // Récupère le corps au format texte
+                _context3.n = 1;
                 return new Promise(function (resolve, reject) {
                   item.body.getAsync(Office.CoercionType.Text, function (res) {
                     if (res.status === Office.AsyncResultStatus.Succeeded) {
@@ -292,38 +373,38 @@ Office.onReady(function (info) {
               case 1:
                 separator = promptInput.value ? "\n\n" : "";
                 promptInput.value = "".concat(promptInput.value).concat(separator, "Sujet: ").concat(subject, "\n\nCorps:\n").concat(bodyText).trim();
-                _context2.n = 3;
+                _context3.n = 3;
                 break;
               case 2:
-                _context2.p = 2;
-                _t2 = _context2.v;
-                output.textContent = "Erreur lors de l'extraction du mail: ".concat((_t2 === null || _t2 === void 0 ? void 0 : _t2.message) || _t2);
+                _context3.p = 2;
+                _t3 = _context3.v;
+                output.textContent = "Erreur lors de l'extraction du mail: ".concat((_t3 === null || _t3 === void 0 ? void 0 : _t3.message) || _t3);
               case 3:
-                return _context2.a(2);
+                return _context3.a(2);
             }
-          }, _callee2, null, [[0, 2]]);
+          }, _callee3, null, [[0, 2]]);
         })));
       }
 
       // Ajouter les catégories du mail (Outlook) au prompt
       if (addCategoriesBtn) {
-        addCategoriesBtn.addEventListener("click", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
-          var item, categories, userCats, _Office$context$mailb, req, hasApi, setFromItem, all, toAppend, _t3, _t4;
-          return _regenerator().w(function (_context3) {
-            while (1) switch (_context3.p = _context3.n) {
+        addCategoriesBtn.addEventListener("click", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+          var item, categories, userCats, _Office$context$mailb, req, hasApi, setFromItem, all, toAppend, _t4, _t5;
+          return _regenerator().w(function (_context4) {
+            while (1) switch (_context4.p = _context4.n) {
               case 0:
-                _context3.p = 0;
+                _context4.p = 0;
                 item = Office.context.mailbox.item; // Récupère les catégories liées à l'élément (lecture/composition)
                 categories = (item === null || item === void 0 ? void 0 : item.categories) || []; // Si vide côté item, tenter de récupérer les catégories définies par l'utilisateur (API mailbox.masterCategories)
                 userCats = [];
-                _context3.p = 1;
+                _context4.p = 1;
                 req = Office.context.requirements;
                 hasApi = req && req.isSetSupported && req.isSetSupported("Mailbox", "1.8");
                 if (!(hasApi && (_Office$context$mailb = Office.context.mailbox) !== null && _Office$context$mailb !== void 0 && (_Office$context$mailb = _Office$context$mailb.masterCategories) !== null && _Office$context$mailb !== void 0 && _Office$context$mailb.getAsync)) {
-                  _context3.n = 2;
+                  _context4.n = 2;
                   break;
                 }
-                _context3.n = 2;
+                _context4.n = 2;
                 return new Promise(function (resolve) {
                   Office.context.mailbox.masterCategories.getAsync(function (res) {
                     if (res.status === Office.AsyncResultStatus.Succeeded) {
@@ -335,33 +416,33 @@ Office.onReady(function (info) {
                   });
                 });
               case 2:
-                _context3.n = 4;
+                _context4.n = 4;
                 break;
               case 3:
-                _context3.p = 3;
-                _t3 = _context3.v;
+                _context4.p = 3;
+                _t4 = _context4.v;
               case 4:
                 setFromItem = Array.isArray(categories) ? categories : [];
                 all = _toConsumableArray(new Set([].concat(_toConsumableArray(setFromItem || []), _toConsumableArray(userCats || []))));
                 if (!(all.length === 0)) {
-                  _context3.n = 5;
+                  _context4.n = 5;
                   break;
                 }
                 output.textContent = "Aucune catégorie trouvée (l’API Catégories nécessite Outlook supportant Mailbox 1.8).";
-                return _context3.a(2);
+                return _context4.a(2);
               case 5:
                 toAppend = "\n\nCat\xE9gories Outlook: ".concat(all.join(", "));
                 promptInput.value = "".concat(promptInput.value || "").concat(toAppend).trim();
-                _context3.n = 7;
+                _context4.n = 7;
                 break;
               case 6:
-                _context3.p = 6;
-                _t4 = _context3.v;
-                output.textContent = "Erreur lors de la r\xE9cup\xE9ration des cat\xE9gories: ".concat((_t4 === null || _t4 === void 0 ? void 0 : _t4.message) || _t4);
+                _context4.p = 6;
+                _t5 = _context4.v;
+                output.textContent = "Erreur lors de la r\xE9cup\xE9ration des cat\xE9gories: ".concat((_t5 === null || _t5 === void 0 ? void 0 : _t5.message) || _t5);
               case 7:
-                return _context3.a(2);
+                return _context4.a(2);
             }
-          }, _callee3, null, [[1, 3], [0, 6]]);
+          }, _callee4, null, [[1, 3], [0, 6]]);
         })));
       }
     }
@@ -373,10 +454,10 @@ function run() {
 
 // Ouvre un Dialog pour authentifier l'utilisateur et renvoyer un token MS Graph
 function _run() {
-  _run = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
+  _run = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
     var item, insertAt, label;
-    return _regenerator().w(function (_context5) {
-      while (1) switch (_context5.n) {
+    return _regenerator().w(function (_context6) {
+      while (1) switch (_context6.n) {
         case 0:
           /**
            * Insert your Outlook code here
@@ -389,9 +470,9 @@ function _run() {
           insertAt.appendChild(document.createTextNode(item.subject));
           insertAt.appendChild(document.createElement("br"));
         case 1:
-          return _context5.a(2);
+          return _context6.a(2);
       }
-    }, _callee5);
+    }, _callee6);
   }));
   return _run.apply(this, arguments);
 }
@@ -481,55 +562,55 @@ if (typeof document !== "undefined") {
         } catch (_unused5) {}
         out.textContent = "Authentification...";
         openAuthDialog(clientId, /*#__PURE__*/function () {
-          var _ref4 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(accessToken, err) {
-            var now, end, startIso, endIso, url, resp, t, data, items, lines, _t5;
-            return _regenerator().w(function (_context4) {
-              while (1) switch (_context4.p = _context4.n) {
+          var _ref5 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(accessToken, err) {
+            var now, end, startIso, endIso, url, resp, t, data, items, lines, _t6;
+            return _regenerator().w(function (_context5) {
+              while (1) switch (_context5.p = _context5.n) {
                 case 0:
                   if (!err) {
-                    _context4.n = 1;
+                    _context5.n = 1;
                     break;
                   }
                   out.textContent = "Erreur: ".concat(err.message || err);
-                  return _context4.a(2);
+                  return _context5.a(2);
                 case 1:
-                  _context4.p = 1;
+                  _context5.p = 1;
                   out.textContent = "Chargement des rendez-vous...";
                   now = new Date();
                   end = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
                   startIso = now.toISOString();
                   endIso = end.toISOString();
                   url = "https://graph.microsoft.com/v1.0/me/calendarView?startDateTime=".concat(encodeURIComponent(startIso), "&endDateTime=").concat(encodeURIComponent(endIso), "&$orderby=start/dateTime&$top=10");
-                  _context4.n = 2;
+                  _context5.n = 2;
                   return fetch(url, {
                     headers: {
                       Authorization: "Bearer ".concat(accessToken)
                     }
                   });
                 case 2:
-                  resp = _context4.v;
+                  resp = _context5.v;
                   if (resp.ok) {
-                    _context4.n = 4;
+                    _context5.n = 4;
                     break;
                   }
-                  _context4.n = 3;
+                  _context5.n = 3;
                   return resp.text();
                 case 3:
-                  t = _context4.v;
+                  t = _context5.v;
                   out.textContent = "Erreur Graph (".concat(resp.status, "): ").concat(t);
-                  return _context4.a(2);
+                  return _context5.a(2);
                 case 4:
-                  _context4.n = 5;
+                  _context5.n = 5;
                   return resp.json();
                 case 5:
-                  data = _context4.v;
+                  data = _context5.v;
                   items = (data === null || data === void 0 ? void 0 : data.value) || [];
                   if (!(items.length === 0)) {
-                    _context4.n = 6;
+                    _context5.n = 6;
                     break;
                   }
                   out.textContent = "Aucun rendez-vous à venir dans les 7 prochains jours.";
-                  return _context4.a(2);
+                  return _context5.a(2);
                 case 6:
                   lines = items.map(function (it) {
                     var _it$start, _it$end, _it$location;
@@ -540,19 +621,19 @@ if (typeof document !== "undefined") {
                     return "- ".concat(subject, " (").concat(start, " -> ").concat(end, ")").concat(location);
                   });
                   out.textContent = lines.join("\n");
-                  _context4.n = 8;
+                  _context5.n = 8;
                   break;
                 case 7:
-                  _context4.p = 7;
-                  _t5 = _context4.v;
-                  out.textContent = "Erreur lors de la r\xE9cup\xE9ration des \xE9v\xE9nements: ".concat((_t5 === null || _t5 === void 0 ? void 0 : _t5.message) || _t5);
+                  _context5.p = 7;
+                  _t6 = _context5.v;
+                  out.textContent = "Erreur lors de la r\xE9cup\xE9ration des \xE9v\xE9nements: ".concat((_t6 === null || _t6 === void 0 ? void 0 : _t6.message) || _t6);
                 case 8:
-                  return _context4.a(2);
+                  return _context5.a(2);
               }
-            }, _callee4, null, [[1, 7]]);
+            }, _callee5, null, [[1, 7]]);
           }));
           return function (_x, _x2) {
-            return _ref4.apply(this, arguments);
+            return _ref5.apply(this, arguments);
           };
         }());
       });
@@ -568,9 +649,8 @@ if (typeof document !== "undefined") {
 __webpack_require__.r(__webpack_exports__);
 // Imports
 var ___HTML_LOADER_IMPORT_0___ = new URL(/* asset import */ __webpack_require__(/*! ./taskpane.css */ "./src/taskpane/taskpane.css"), __webpack_require__.b);
-var ___HTML_LOADER_IMPORT_1___ = new URL(/* asset import */ __webpack_require__(/*! ../../assets/logo-filled.png */ "./assets/logo-filled.png"), __webpack_require__.b);
 // Module
-var code = "<!-- Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT License. -->\r\n<!-- This file shows how to design a first-run page that provides a welcome screen to the user about the features of the add-in. -->\r\n\r\n<!DOCTYPE html>\r\n<html>\r\n\r\n<head>\r\n    <meta charset=\"UTF-8\" />\r\n    <meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\" />\r\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\r\n    <title>Contoso Task Pane Add-in</title>\r\n\r\n    <!-- Office JavaScript API -->\r\n    <" + "script type=\"text/javascript\" src=\"https://appsforoffice.microsoft.com/lib/1/hosted/office.js\"><" + "/script>\r\n\r\n    <!-- For more information on Fluent UI, visit https://developer.microsoft.com/fluentui#/. -->\r\n    <link rel=\"stylesheet\" href=\"https://res-1.cdn.office.net/files/fabric-cdn-prod_20230815.002/office-ui-fabric-core/11.1.0/css/fabric.min.css\"/>\r\n\r\n    <!-- Template styles -->\r\n    <link href=\"" + ___HTML_LOADER_IMPORT_0___ + "\" rel=\"stylesheet\" type=\"text/css\" />\r\n</head>\r\n\r\n<body class=\"ms-font-m ms-welcome ms-Fabric\">\r\n    <header class=\"ms-welcome__header ms-bgColor-neutralLighter\">\r\n        <img width=\"90\" height=\"90\" src=\"" + ___HTML_LOADER_IMPORT_1___ + "\" alt=\"Contoso\" title=\"Contoso\" />\r\n        <h1 class=\"ms-font-su\">Page d'accueil - Hello world</h1>\r\n    </header>\r\n    <section id=\"sideload-msg\" class=\"ms-welcome__main\">\r\n        <h2 class=\"ms-font-xl\">Please <a target=\"_blank\" href=\"https://learn.microsoft.com/office/dev/add-ins/testing/test-debug-office-add-ins#sideload-an-office-add-in-for-testing\">sideload</a> your add-in to see app body.</h2>\r\n    </section>\r\n    <main id=\"app-body\" class=\"ms-welcome__main\" style=\"display: none;\">\r\n        <h2 class=\"ms-font-xl\">Bienvenue</h2>\r\n        <p id=\"hello-text\" class=\"ms-font-l\">Hello world</p>\r\n\r\n        <section class=\"card\">\r\n            <h3 class=\"ms-font-l\">Tester l'API OpenAI (ChatGPT)</h3>\r\n            <div class=\"stack\">\r\n                <label class=\"ms-font-m\" for=\"api-key\">Clé API OpenAI (stockée localement, usage dev uniquement):</label>\r\n                <input id=\"api-key\" type=\"password\" placeholder=\"sk-...\" class=\"input\"/>\r\n\r\n                <label class=\"ms-font-m\" for=\"prompt-input\">Prompt</label>\r\n                <textarea id=\"prompt-input\" rows=\"5\" placeholder=\"Votre question...\" class=\"input\"></textarea>\r\n                <div style=\"display:flex; gap:8px; flex-wrap:wrap;\">\r\n                    <button id=\"send-prompt\" class=\"btn-primary\">Envoyer à ChatGPT</button>\r\n                    <button id=\"add-mail-content\" class=\"btn-secondary\">Ajouter le contenu du mail au prompt</button>\r\n                    <button id=\"add-mail-categories\" class=\"btn-secondary\">Ajouter les catégories du mail</button>\r\n                </div>\r\n            </div>\r\n\r\n            <div class=\"section\">\r\n                <h4 class=\"ms-font-m\">Réponse</h4>\r\n                <pre id=\"response-output\" class=\"output\"></pre>\r\n            </div>\r\n        </section>\r\n\r\n        <section class=\"card\">\r\n            <h3 class=\"ms-font-l\">Actions Outlook</h3>\r\n            <button id=\"run\" class=\"btn-primary\">Afficher le sujet</button>\r\n            <p id=\"item-subject\" class=\"ms-font-m\" style=\"margin-top:8px;\"></p>\r\n        </section>\r\n\r\n        <section class=\"card\">\r\n            <h3 class=\"ms-font-l\">Mes prochains rendez-vous</h3>\r\n            <div class=\"stack\">\r\n                <div class=\"stack\" style=\"gap:6px;\">\r\n                    <label class=\"ms-font-m\" for=\"msal-client-id\">Client ID (Azure AD) — requis pour Microsoft Graph</label>\r\n                    <input id=\"msal-client-id\" class=\"input\" placeholder=\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\" />\r\n                </div>\r\n                <button id=\"list-events\" class=\"btn-primary\">Lister mes prochains RDV</button>\r\n                <div id=\"events-output\" class=\"output\" style=\"min-height: 40px;\">Aucune donnée.</div>\r\n            </div>\r\n        </section>\r\n\r\n        <section class=\"card\">\r\n            <h3 class=\"ms-font-l\">Catégories de l’utilisateur</h3>\r\n            <div class=\"stack\">\r\n                <button id=\"list-categories\" class=\"btn-primary\">Récupérer les catégories</button>\r\n                <div id=\"categories-output\" class=\"output\" style=\"min-height: 40px;\">Aucune donnée.</div>\r\n            </div>\r\n        </section>\r\n    </main>\r\n</body>\r\n\r\n</html>\r\n";
+var code = "<!-- Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT License. -->\r\n<!-- This file shows how to design a first-run page that provides a welcome screen to the user about the features of the add-in. -->\r\n\r\n<!DOCTYPE html>\r\n<html>\r\n\r\n<head>\r\n    <meta charset=\"UTF-8\" />\r\n    <meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\" />\r\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\r\n    <title>Contoso Task Pane Add-in</title>\r\n\r\n    <!-- Office JavaScript API -->\r\n    <" + "script type=\"text/javascript\" src=\"https://appsforoffice.microsoft.com/lib/1/hosted/office.js\"><" + "/script>\r\n\r\n    <!-- For more information on Fluent UI, visit https://developer.microsoft.com/fluentui#/. -->\r\n    <link rel=\"stylesheet\" href=\"https://res-1.cdn.office.net/files/fabric-cdn-prod_20230815.002/office-ui-fabric-core/11.1.0/css/fabric.min.css\"/>\r\n\r\n    <!-- Template styles -->\r\n    <link href=\"" + ___HTML_LOADER_IMPORT_0___ + "\" rel=\"stylesheet\" type=\"text/css\" />\r\n</head>\r\n\r\n<body class=\"ms-font-m ms-welcome ms-Fabric\">\r\n    <header class=\"ms-welcome__header ms-bgColor-neutralLighter\">\r\n        <h1 class=\"ms-font-su\" style=\"margin:0;\">Bienvenue</h1>\r\n    </header>\r\n    <section id=\"sideload-msg\" class=\"ms-welcome__main\">\r\n        <h2 class=\"ms-font-xl\">Please <a target=\"_blank\" href=\"https://learn.microsoft.com/office/dev/add-ins/testing/test-debug-office-add-ins#sideload-an-office-add-in-for-testing\">sideload</a> your add-in to see app body.</h2>\r\n    </section>\r\n    <main id=\"app-body\" class=\"ms-welcome__main\" style=\"display: none;\">\r\n\r\n        <section class=\"card\">\r\n            <h3 class=\"ms-font-l\">Tester l'API OpenAI (ChatGPT)</h3>\r\n            <div class=\"stack\">\r\n                <label class=\"ms-font-m\" for=\"api-key\">Clé API OpenAI (stockée localement, usage dev uniquement):</label>\r\n                <input id=\"api-key\" type=\"password\" placeholder=\"sk-...\" class=\"input\"/>\r\n\r\n                <label class=\"ms-font-m\" for=\"prompt-input\">Prompt</label>\r\n                <textarea id=\"prompt-input\" rows=\"5\" placeholder=\"Votre question...\" class=\"input\"></textarea>\r\n                <div style=\"display:flex; gap:8px; flex-wrap:wrap;\">\r\n                    <button id=\"send-prompt\" class=\"btn-primary\">Envoyer à ChatGPT</button>\r\n                    <button id=\"add-mail-content\" class=\"btn-secondary\">Ajouter le contenu du mail au prompt</button>\r\n                    <button id=\"add-mail-categories\" class=\"btn-secondary\">Ajouter les catégories du mail</button>\r\n                </div>\r\n            </div>\r\n\r\n            <div class=\"section\">\r\n                <h4 class=\"ms-font-m\">Réponse</h4>\r\n                <pre id=\"response-output\" class=\"output\"></pre>\r\n            </div>\r\n        </section>\r\n\r\n        <section class=\"card\">\r\n            <h3 class=\"ms-font-l\">Actions Outlook</h3>\r\n            <div style=\"display:flex; gap:8px; flex-wrap:wrap;\">\r\n                <button id=\"run\" class=\"btn-primary\">Afficher le sujet</button>\r\n                <button id=\"auto-reply\" class=\"btn-secondary\">Réponse automatique</button>\r\n            </div>\r\n            <p id=\"item-subject\" class=\"ms-font-m\" style=\"margin-top:8px;\"></p>\r\n        </section>\r\n\r\n        <section class=\"card\">\r\n            <h3 class=\"ms-font-l\">Mes prochains rendez-vous</h3>\r\n            <div class=\"stack\">\r\n                <div class=\"stack\" style=\"gap:6px;\">\r\n                    <label class=\"ms-font-m\" for=\"msal-client-id\">Client ID (Azure AD) — requis pour Microsoft Graph</label>\r\n                    <input id=\"msal-client-id\" class=\"input\" placeholder=\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\" />\r\n                </div>\r\n                <button id=\"list-events\" class=\"btn-primary\">Lister mes prochains RDV</button>\r\n                <div id=\"events-output\" class=\"output\" style=\"min-height: 40px;\">Aucune donnée.</div>\r\n            </div>\r\n        </section>\r\n\r\n        <section class=\"card\">\r\n            <h3 class=\"ms-font-l\">Catégories de l’utilisateur</h3>\r\n            <div class=\"stack\">\r\n                <button id=\"list-categories\" class=\"btn-primary\">Récupérer les catégories</button>\r\n                <div id=\"categories-output\" class=\"output\" style=\"min-height: 40px;\">Aucune donnée.</div>\r\n            </div>\r\n        </section>\r\n    </main>\r\n</body>\r\n\r\n</html>\r\n";
 // Exports
 /* harmony default export */ __webpack_exports__["default"] = (code);
 }();
