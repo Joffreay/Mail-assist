@@ -186,6 +186,9 @@ Office.onReady(function (info) {
     var addMailBtn = document.getElementById("add-mail-content");
     var addCategoriesBtn = document.getElementById("add-mail-categories");
     var output = document.getElementById("response-output");
+    var listEventsBtn = document.getElementById("list-events");
+    var msalClientIdInput = document.getElementById("msal-client-id");
+    var eventsOutput = document.getElementById("events-output");
     if (apiKeyInput && promptInput && sendBtn && output) {
       // charger la clé si déjà sauvegardée en localStorage (dev uniquement)
       try {
@@ -305,7 +308,7 @@ Office.onReady(function (info) {
       // Ajouter les catégories du mail (Outlook) au prompt
       if (addCategoriesBtn) {
         addCategoriesBtn.addEventListener("click", /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
-          var item, categories, userCats, _Office$context$mailb, setFromItem, all, toAppend, _t3, _t4;
+          var item, categories, userCats, _Office$context$mailb, req, hasApi, setFromItem, all, toAppend, _t3, _t4;
           return _regenerator().w(function (_context3) {
             while (1) switch (_context3.p = _context3.n) {
               case 0:
@@ -314,7 +317,9 @@ Office.onReady(function (info) {
                 categories = (item === null || item === void 0 ? void 0 : item.categories) || []; // Si vide côté item, tenter de récupérer les catégories définies par l'utilisateur (API mailbox.masterCategories)
                 userCats = [];
                 _context3.p = 1;
-                if (!((_Office$context$mailb = Office.context.mailbox) !== null && _Office$context$mailb !== void 0 && (_Office$context$mailb = _Office$context$mailb.masterCategories) !== null && _Office$context$mailb !== void 0 && _Office$context$mailb.getAsync)) {
+                req = Office.context.requirements;
+                hasApi = req && req.isSetSupported && req.isSetSupported("Mailbox", "1.8");
+                if (!(hasApi && (_Office$context$mailb = Office.context.mailbox) !== null && _Office$context$mailb !== void 0 && (_Office$context$mailb = _Office$context$mailb.masterCategories) !== null && _Office$context$mailb !== void 0 && _Office$context$mailb.getAsync)) {
                   _context3.n = 2;
                   break;
                 }
@@ -342,7 +347,7 @@ Office.onReady(function (info) {
                   _context3.n = 5;
                   break;
                 }
-                output.textContent = "Aucune catégorie trouvée.";
+                output.textContent = "Aucune catégorie trouvée (l’API Catégories nécessite Outlook supportant Mailbox 1.8).";
                 return _context3.a(2);
               case 5:
                 toAppend = "\n\nCat\xE9gories Outlook: ".concat(all.join(", "));
@@ -365,11 +370,13 @@ Office.onReady(function (info) {
 function run() {
   return _run.apply(this, arguments);
 }
+
+// Ouvre un Dialog pour authentifier l'utilisateur et renvoyer un token MS Graph
 function _run() {
-  _run = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+  _run = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
     var item, insertAt, label;
-    return _regenerator().w(function (_context4) {
-      while (1) switch (_context4.n) {
+    return _regenerator().w(function (_context5) {
+      while (1) switch (_context5.n) {
         case 0:
           /**
            * Insert your Outlook code here
@@ -382,11 +389,175 @@ function _run() {
           insertAt.appendChild(document.createTextNode(item.subject));
           insertAt.appendChild(document.createElement("br"));
         case 1:
-          return _context4.a(2);
+          return _context5.a(2);
       }
-    }, _callee4);
+    }, _callee5);
   }));
   return _run.apply(this, arguments);
+}
+function openAuthDialog(clientId, onResult) {
+  var url = "".concat(location.origin, "/auth2.html?clientId=").concat(encodeURIComponent(clientId));
+  Office.context.ui.displayDialogAsync(url, {
+    height: 60,
+    width: 40,
+    displayInIframe: false
+  }, function (res) {
+    if (res.status !== Office.AsyncResultStatus.Succeeded) {
+      onResult(null, new Error("Impossible d’ouvrir la fenêtre d’authentification."));
+      return;
+    }
+    var dialog = res.value;
+    dialog.addEventHandler(Office.EventType.DialogMessageReceived, function (arg) {
+      try {
+        var msg = JSON.parse(arg.message || "{}");
+        if (msg.type === "token" && msg.token) {
+          dialog.close();
+          onResult(msg.token, null);
+        } else if (msg.type === "error") {
+          dialog.close();
+          onResult(null, new Error(msg.error || "Erreur d’authentification."));
+        }
+      } catch (e) {
+        dialog.close();
+        onResult(null, e);
+      }
+    });
+  });
+}
+
+// Attache l’action du bouton "Lister mes prochains RDV"
+if (typeof document !== "undefined") {
+  document.addEventListener("DOMContentLoaded", function () {
+    // Bouton catégories utilisateur (masterCategories)
+    var catBtn = document.getElementById("list-categories");
+    var catOut = document.getElementById("categories-output");
+    if (catBtn && catOut) {
+      catBtn.addEventListener("click", function () {
+        try {
+          var _Office$context$mailb2;
+          var req = Office.context.requirements;
+          var hasApi = req && req.isSetSupported && req.isSetSupported("Mailbox", "1.8");
+          if (!(hasApi && (_Office$context$mailb2 = Office.context.mailbox) !== null && _Office$context$mailb2 !== void 0 && (_Office$context$mailb2 = _Office$context$mailb2.masterCategories) !== null && _Office$context$mailb2 !== void 0 && _Office$context$mailb2.getAsync)) {
+            catOut.textContent = "API non supportée (Mailbox 1.8 requis).";
+            return;
+          }
+          catOut.textContent = "Chargement des catégories...";
+          Office.context.mailbox.masterCategories.getAsync(function (res) {
+            if (res.status === Office.AsyncResultStatus.Succeeded) {
+              var names = (res.value || []).map(function (c) {
+                return c.displayName;
+              }).filter(Boolean);
+              catOut.textContent = names.length ? names.join("\n") : "Aucune catégorie définie.";
+            } else {
+              var _res$error;
+              catOut.textContent = "Erreur: ".concat(((_res$error = res.error) === null || _res$error === void 0 ? void 0 : _res$error.message) || res.error || "inconnue");
+            }
+          });
+        } catch (e) {
+          catOut.textContent = "Erreur: ".concat((e === null || e === void 0 ? void 0 : e.message) || e);
+        }
+      });
+    }
+    var btn = document.getElementById("list-events");
+    var clientIdInput = document.getElementById("msal-client-id");
+    var out = document.getElementById("events-output");
+    // Préremplir depuis localStorage si disponible
+    try {
+      var savedClientId = localStorage.getItem("msal_client_id");
+      if (savedClientId && clientIdInput && !clientIdInput.value) {
+        clientIdInput.value = savedClientId;
+      }
+    } catch (_unused4) {}
+    if (btn && clientIdInput && out) {
+      btn.addEventListener("click", function () {
+        var clientId = clientIdInput.value.trim();
+        if (!clientId) {
+          out.textContent = "Veuillez saisir un Client ID (Azure AD) pour appeler Microsoft Graph.";
+          return;
+        }
+        // Mémoriser le Client ID pour l’auth dialog
+        try {
+          localStorage.setItem("msal_client_id", clientId);
+        } catch (_unused5) {}
+        out.textContent = "Authentification...";
+        openAuthDialog(clientId, /*#__PURE__*/function () {
+          var _ref4 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(accessToken, err) {
+            var now, end, startIso, endIso, url, resp, t, data, items, lines, _t5;
+            return _regenerator().w(function (_context4) {
+              while (1) switch (_context4.p = _context4.n) {
+                case 0:
+                  if (!err) {
+                    _context4.n = 1;
+                    break;
+                  }
+                  out.textContent = "Erreur: ".concat(err.message || err);
+                  return _context4.a(2);
+                case 1:
+                  _context4.p = 1;
+                  out.textContent = "Chargement des rendez-vous...";
+                  now = new Date();
+                  end = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+                  startIso = now.toISOString();
+                  endIso = end.toISOString();
+                  url = "https://graph.microsoft.com/v1.0/me/calendarView?startDateTime=".concat(encodeURIComponent(startIso), "&endDateTime=").concat(encodeURIComponent(endIso), "&$orderby=start/dateTime&$top=10");
+                  _context4.n = 2;
+                  return fetch(url, {
+                    headers: {
+                      Authorization: "Bearer ".concat(accessToken)
+                    }
+                  });
+                case 2:
+                  resp = _context4.v;
+                  if (resp.ok) {
+                    _context4.n = 4;
+                    break;
+                  }
+                  _context4.n = 3;
+                  return resp.text();
+                case 3:
+                  t = _context4.v;
+                  out.textContent = "Erreur Graph (".concat(resp.status, "): ").concat(t);
+                  return _context4.a(2);
+                case 4:
+                  _context4.n = 5;
+                  return resp.json();
+                case 5:
+                  data = _context4.v;
+                  items = (data === null || data === void 0 ? void 0 : data.value) || [];
+                  if (!(items.length === 0)) {
+                    _context4.n = 6;
+                    break;
+                  }
+                  out.textContent = "Aucun rendez-vous à venir dans les 7 prochains jours.";
+                  return _context4.a(2);
+                case 6:
+                  lines = items.map(function (it) {
+                    var _it$start, _it$end, _it$location;
+                    var subject = it.subject || "(Sans objet)";
+                    var start = ((_it$start = it.start) === null || _it$start === void 0 ? void 0 : _it$start.dateTime) || "";
+                    var end = ((_it$end = it.end) === null || _it$end === void 0 ? void 0 : _it$end.dateTime) || "";
+                    var location = (_it$location = it.location) !== null && _it$location !== void 0 && _it$location.displayName ? " @ ".concat(it.location.displayName) : "";
+                    return "- ".concat(subject, " (").concat(start, " -> ").concat(end, ")").concat(location);
+                  });
+                  out.textContent = lines.join("\n");
+                  _context4.n = 8;
+                  break;
+                case 7:
+                  _context4.p = 7;
+                  _t5 = _context4.v;
+                  out.textContent = "Erreur lors de la r\xE9cup\xE9ration des \xE9v\xE9nements: ".concat((_t5 === null || _t5 === void 0 ? void 0 : _t5.message) || _t5);
+                case 8:
+                  return _context4.a(2);
+              }
+            }, _callee4, null, [[1, 7]]);
+          }));
+          return function (_x, _x2) {
+            return _ref4.apply(this, arguments);
+          };
+        }());
+      });
+    }
+  });
 }
 }();
 // This entry needs to be wrapped in an IIFE because it needs to be isolated against other entry modules.
@@ -399,7 +570,7 @@ __webpack_require__.r(__webpack_exports__);
 var ___HTML_LOADER_IMPORT_0___ = new URL(/* asset import */ __webpack_require__(/*! ./taskpane.css */ "./src/taskpane/taskpane.css"), __webpack_require__.b);
 var ___HTML_LOADER_IMPORT_1___ = new URL(/* asset import */ __webpack_require__(/*! ../../assets/logo-filled.png */ "./assets/logo-filled.png"), __webpack_require__.b);
 // Module
-var code = "<!-- Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT License. -->\r\n<!-- This file shows how to design a first-run page that provides a welcome screen to the user about the features of the add-in. -->\r\n\r\n<!DOCTYPE html>\r\n<html>\r\n\r\n<head>\r\n    <meta charset=\"UTF-8\" />\r\n    <meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\" />\r\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\r\n    <title>Contoso Task Pane Add-in</title>\r\n\r\n    <!-- Office JavaScript API -->\r\n    <" + "script type=\"text/javascript\" src=\"https://appsforoffice.microsoft.com/lib/1/hosted/office.js\"><" + "/script>\r\n\r\n    <!-- For more information on Fluent UI, visit https://developer.microsoft.com/fluentui#/. -->\r\n    <link rel=\"stylesheet\" href=\"https://res-1.cdn.office.net/files/fabric-cdn-prod_20230815.002/office-ui-fabric-core/11.1.0/css/fabric.min.css\"/>\r\n\r\n    <!-- Template styles -->\r\n    <link href=\"" + ___HTML_LOADER_IMPORT_0___ + "\" rel=\"stylesheet\" type=\"text/css\" />\r\n</head>\r\n\r\n<body class=\"ms-font-m ms-welcome ms-Fabric\">\r\n    <header class=\"ms-welcome__header ms-bgColor-neutralLighter\">\r\n        <img width=\"90\" height=\"90\" src=\"" + ___HTML_LOADER_IMPORT_1___ + "\" alt=\"Contoso\" title=\"Contoso\" />\r\n        <h1 class=\"ms-font-su\">Page d'accueil - Hello world</h1>\r\n    </header>\r\n    <section id=\"sideload-msg\" class=\"ms-welcome__main\">\r\n        <h2 class=\"ms-font-xl\">Please <a target=\"_blank\" href=\"https://learn.microsoft.com/office/dev/add-ins/testing/test-debug-office-add-ins#sideload-an-office-add-in-for-testing\">sideload</a> your add-in to see app body.</h2>\r\n    </section>\r\n    <main id=\"app-body\" class=\"ms-welcome__main\" style=\"display: none;\">\r\n        <h2 class=\"ms-font-xl\">Bienvenue</h2>\r\n        <p id=\"hello-text\" class=\"ms-font-l\">Hello world</p>\r\n\r\n        <section class=\"card\">\r\n            <h3 class=\"ms-font-l\">Tester l'API OpenAI (ChatGPT)</h3>\r\n            <div class=\"stack\">\r\n                <label class=\"ms-font-m\" for=\"api-key\">Clé API OpenAI (stockée localement, usage dev uniquement):</label>\r\n                <input id=\"api-key\" type=\"password\" placeholder=\"sk-...\" class=\"input\"/>\r\n\r\n                <label class=\"ms-font-m\" for=\"prompt-input\">Prompt</label>\r\n                <textarea id=\"prompt-input\" rows=\"5\" placeholder=\"Votre question...\" class=\"input\"></textarea>\r\n                <div style=\"display:flex; gap:8px; flex-wrap:wrap;\">\r\n                    <button id=\"send-prompt\" class=\"btn-primary\">Envoyer à ChatGPT</button>\r\n                    <button id=\"add-mail-content\" class=\"btn-secondary\">Ajouter le contenu du mail au prompt</button>\r\n                    <button id=\"add-mail-categories\" class=\"btn-secondary\">Ajouter les catégories du mail</button>\r\n                </div>\r\n            </div>\r\n\r\n            <div class=\"section\">\r\n                <h4 class=\"ms-font-m\">Réponse</h4>\r\n                <pre id=\"response-output\" class=\"output\"></pre>\r\n            </div>\r\n        </section>\r\n\r\n        <section class=\"card\">\r\n            <h3 class=\"ms-font-l\">Actions Outlook</h3>\r\n            <button id=\"run\" class=\"btn-primary\">Afficher le sujet</button>\r\n            <p id=\"item-subject\" class=\"ms-font-m\" style=\"margin-top:8px;\"></p>\r\n        </section>\r\n    </main>\r\n</body>\r\n\r\n</html>\r\n";
+var code = "<!-- Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT License. -->\r\n<!-- This file shows how to design a first-run page that provides a welcome screen to the user about the features of the add-in. -->\r\n\r\n<!DOCTYPE html>\r\n<html>\r\n\r\n<head>\r\n    <meta charset=\"UTF-8\" />\r\n    <meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\" />\r\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\r\n    <title>Contoso Task Pane Add-in</title>\r\n\r\n    <!-- Office JavaScript API -->\r\n    <" + "script type=\"text/javascript\" src=\"https://appsforoffice.microsoft.com/lib/1/hosted/office.js\"><" + "/script>\r\n\r\n    <!-- For more information on Fluent UI, visit https://developer.microsoft.com/fluentui#/. -->\r\n    <link rel=\"stylesheet\" href=\"https://res-1.cdn.office.net/files/fabric-cdn-prod_20230815.002/office-ui-fabric-core/11.1.0/css/fabric.min.css\"/>\r\n\r\n    <!-- Template styles -->\r\n    <link href=\"" + ___HTML_LOADER_IMPORT_0___ + "\" rel=\"stylesheet\" type=\"text/css\" />\r\n</head>\r\n\r\n<body class=\"ms-font-m ms-welcome ms-Fabric\">\r\n    <header class=\"ms-welcome__header ms-bgColor-neutralLighter\">\r\n        <img width=\"90\" height=\"90\" src=\"" + ___HTML_LOADER_IMPORT_1___ + "\" alt=\"Contoso\" title=\"Contoso\" />\r\n        <h1 class=\"ms-font-su\">Page d'accueil - Hello world</h1>\r\n    </header>\r\n    <section id=\"sideload-msg\" class=\"ms-welcome__main\">\r\n        <h2 class=\"ms-font-xl\">Please <a target=\"_blank\" href=\"https://learn.microsoft.com/office/dev/add-ins/testing/test-debug-office-add-ins#sideload-an-office-add-in-for-testing\">sideload</a> your add-in to see app body.</h2>\r\n    </section>\r\n    <main id=\"app-body\" class=\"ms-welcome__main\" style=\"display: none;\">\r\n        <h2 class=\"ms-font-xl\">Bienvenue</h2>\r\n        <p id=\"hello-text\" class=\"ms-font-l\">Hello world</p>\r\n\r\n        <section class=\"card\">\r\n            <h3 class=\"ms-font-l\">Tester l'API OpenAI (ChatGPT)</h3>\r\n            <div class=\"stack\">\r\n                <label class=\"ms-font-m\" for=\"api-key\">Clé API OpenAI (stockée localement, usage dev uniquement):</label>\r\n                <input id=\"api-key\" type=\"password\" placeholder=\"sk-...\" class=\"input\"/>\r\n\r\n                <label class=\"ms-font-m\" for=\"prompt-input\">Prompt</label>\r\n                <textarea id=\"prompt-input\" rows=\"5\" placeholder=\"Votre question...\" class=\"input\"></textarea>\r\n                <div style=\"display:flex; gap:8px; flex-wrap:wrap;\">\r\n                    <button id=\"send-prompt\" class=\"btn-primary\">Envoyer à ChatGPT</button>\r\n                    <button id=\"add-mail-content\" class=\"btn-secondary\">Ajouter le contenu du mail au prompt</button>\r\n                    <button id=\"add-mail-categories\" class=\"btn-secondary\">Ajouter les catégories du mail</button>\r\n                </div>\r\n            </div>\r\n\r\n            <div class=\"section\">\r\n                <h4 class=\"ms-font-m\">Réponse</h4>\r\n                <pre id=\"response-output\" class=\"output\"></pre>\r\n            </div>\r\n        </section>\r\n\r\n        <section class=\"card\">\r\n            <h3 class=\"ms-font-l\">Actions Outlook</h3>\r\n            <button id=\"run\" class=\"btn-primary\">Afficher le sujet</button>\r\n            <p id=\"item-subject\" class=\"ms-font-m\" style=\"margin-top:8px;\"></p>\r\n        </section>\r\n\r\n        <section class=\"card\">\r\n            <h3 class=\"ms-font-l\">Mes prochains rendez-vous</h3>\r\n            <div class=\"stack\">\r\n                <div class=\"stack\" style=\"gap:6px;\">\r\n                    <label class=\"ms-font-m\" for=\"msal-client-id\">Client ID (Azure AD) — requis pour Microsoft Graph</label>\r\n                    <input id=\"msal-client-id\" class=\"input\" placeholder=\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\" />\r\n                </div>\r\n                <button id=\"list-events\" class=\"btn-primary\">Lister mes prochains RDV</button>\r\n                <div id=\"events-output\" class=\"output\" style=\"min-height: 40px;\">Aucune donnée.</div>\r\n            </div>\r\n        </section>\r\n\r\n        <section class=\"card\">\r\n            <h3 class=\"ms-font-l\">Catégories de l’utilisateur</h3>\r\n            <div class=\"stack\">\r\n                <button id=\"list-categories\" class=\"btn-primary\">Récupérer les catégories</button>\r\n                <div id=\"categories-output\" class=\"output\" style=\"min-height: 40px;\">Aucune donnée.</div>\r\n            </div>\r\n        </section>\r\n    </main>\r\n</body>\r\n\r\n</html>\r\n";
 // Exports
 /* harmony default export */ __webpack_exports__["default"] = (code);
 }();

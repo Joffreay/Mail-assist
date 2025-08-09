@@ -58,6 +58,26 @@
             <button id="run" class="btn-primary">Afficher le sujet</button>
             <p id="item-subject" class="ms-font-m" style="margin-top:8px;"></p>
         </section>
+
+        <section class="card">
+            <h3 class="ms-font-l">Mes prochains rendez-vous</h3>
+            <div class="stack">
+                <div class="stack" style="gap:6px;">
+                    <label class="ms-font-m" for="msal-client-id">Client ID (Azure AD) — requis pour Microsoft Graph</label>
+                    <input id="msal-client-id" class="input" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+                </div>
+                <button id="list-events" class="btn-primary">Lister mes prochains RDV</button>
+                <div id="events-output" class="output" style="min-height: 40px;">Aucune donnée.</div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h3 class="ms-font-l">Catégories de l’utilisateur</h3>
+            <div class="stack">
+                <button id="list-categories" class="btn-primary">Récupérer les catégories</button>
+                <div id="categories-output" class="output" style="min-height: 40px;">Aucune donnée.</div>
+            </div>
+        </section>
     </main>
 </body>
 

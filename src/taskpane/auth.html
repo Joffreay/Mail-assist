@@ -1,0 +1,108 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Authentication</title>
+  <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script type="text/javascript" src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+  <style>
+    body { font-family: Segoe UI, Arial, sans-serif; margin: 24px; }
+  </style>
+  </head>
+  <body>
+  <p id="status">Authentification en cours...</p>
+  <script>
+    // Assure l'initialisation Office (dialog)
+    window.Office = window.Office || {};
+    Office.initialize = Office.initialize || function () {};
+    (async () => {
+      try {
+        const params = new URLSearchParams(location.search);
+        let clientId = params.get("clientId");
+        if (!clientId) {
+          // Essayer depuis le fragment (#cid=...)
+          const hashParams = new URLSearchParams(location.hash?.replace(/^#/, ""));
+          clientId = hashParams.get("cid") || clientId;
+        }
+        if (!clientId) {
+          try { clientId = localStorage.getItem("msal_client_id") || ""; } catch {}
+        }
+        if (!clientId) {
+          // Essayer d'envoyer à la fenêtre parente dès que possible
+          try { Office.context.ui.messageParent(JSON.stringify({ type: "error", error: "Client ID manquant" })); } catch {}
+          return;
+        }
+        const msalInstance = new msal.PublicClientApplication({
+          auth: {
+            clientId,
+            redirectUri: `${location.origin}/auth.html`,
+            navigateToLoginRequestUrl: false,
+          },
+          cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: true },
+          system: { allowRedirectInIframe: true },
+          loggerOptions: {
+            loggerCallback: (level, message, containsPii) => {
+              if (/error|warn/i.test(message)) { try { document.getElementById("status").textContent = message; } catch {} }
+            },
+            logLevel: msal.LogLevel.Warning,
+            piiLoggingEnabled: false,
+          },
+        });
+        const scopes = ["User.Read", "Calendars.Read"];
+        const setStatus = (t) => { try { document.getElementById("status").textContent = t; } catch {} };
+
+        setStatus("Traitement du résultat d’authentification...");
+        const redirectResult = await msalInstance.handleRedirectPromise();
+        let account = redirectResult?.account || msalInstance.getAllAccounts()[0];
+        if (!account) {
+          setStatus("Ouverture de la fenêtre de connexion...");
+          const loginResp = await msalInstance.loginPopup({ scopes }).catch(async () => {
+            // Fallback ultime: redirect si popup bloqué
+            setStatus("Connexion par redirection...");
+            await msalInstance.loginRedirect({ scopes });
+            return null;
+          });
+          if (!loginResp) return; // redirect lancé
+          account = loginResp.account || msalInstance.getAllAccounts()[0];
+        }
+        setStatus("Récupération du jeton...");
+        const tokenResult = await msalInstance.acquireTokenSilent({ scopes, account }).catch(async (err) => {
+          if (err && (err.errorCode === "interaction_required" || err.errorCode === "login_required" || err.errorCode === "consent_required")) {
+            setStatus("Consent/interaction requis, ouverture d’une fenêtre...");
+            const r = await msalInstance.acquireTokenPopup({ scopes }).catch(async () => {
+              setStatus("Consent par redirection...");
+              await msalInstance.acquireTokenRedirect({ scopes });
+              return null;
+            });
+            return r;
+          }
+          throw err;
+        });
+        if (!tokenResult) return; // un redirect vient d'être lancé
+        setStatus("Envoi du jeton à l’add-in...");
+        const payload = JSON.stringify({ type: "token", token: tokenResult.accessToken });
+        const start = Date.now();
+        const trySend = () => {
+          try { if (window.Office?.context?.ui?.messageParent) { Office.context.ui.messageParent(payload); return true; } } catch {}
+          return false;
+        };
+        if (!trySend()) {
+          const timer = setInterval(() => {
+            if (trySend() || Date.now() - start > 30000) { clearInterval(timer); try { window.close(); } catch {} }
+          }, 200);
+        } else {
+          try { window.close(); } catch {}
+        }
+      } catch (e) {
+        const msg = e && e.message ? e.message : String(e);
+        try { document.getElementById("status").textContent = `Erreur: ${msg}`; } catch {}
+        try { Office.context.ui.messageParent(JSON.stringify({ type: "error", error: msg })); } catch {}
+      }
+    })();
+  </script>
+  </body>
+  </html>
+
+

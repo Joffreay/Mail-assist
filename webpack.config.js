@@ -56,6 +56,17 @@ module.exports = async (env, options) => {
         template: "./src/taskpane/taskpane.html",
         chunks: ["polyfill", "taskpane"],
       }),
+      new HtmlWebpackPlugin({
+        filename: "auth2.html",
+        template: "./src/taskpane/auth2.html",
+        chunks: [],
+      }),
+      // Page d'authentification (servie directement, sans bundle JS dédié)
+      new HtmlWebpackPlugin({
+        filename: "auth.html",
+        template: "./src/taskpane/auth.html",
+        chunks: [],
+      }),
       new CopyWebpackPlugin({
         patterns: [
           {
