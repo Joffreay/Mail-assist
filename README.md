@@ -1,39 +1,40 @@
 ## Mail-assist — Complément Outlook (Task Pane + Commandes)
 
-Projet de complément Office pour Outlook, basé sur Webpack 5, Babel et Office.js. Le code applicatif se trouve dans le dossier `My Office Add-in/`.
+Projet de complément Office pour Outlook, basé sur Webpack 5, Babel et Office.js. Développement actif à la racine du dépôt (`webpack.config.js`, `src/`, `manifest-xml-out/`). Le dossier `My Office Add-in/` est présent comme gabarit distinct (dépôt imbriqué) et n’est pas utilisé par défaut.
 
 ## Aperçu
 
 - Complément Outlook avec volet des tâches (task pane) et commandes UI-less
 - Pile technique: JavaScript, Webpack 5, Babel (`@babel/preset-env`), polyfills (`core-js`, `regenerator-runtime`), Office.js
-- Hébergement dev: HTTPS local via serveur webpack, sideload d’Outlook
+- Hébergement dev: HTTPS local via webpack-dev-server (port 3001)
 - Manifeste: XML pointant vers `https://localhost:3001`
 
 ## Fonctionnalités
 
 - Volet Outlook (Task Pane):
-  - Accueil “Hello world”, affichage du sujet du message sélectionné.
-  - Démo d’appel API OpenAI (clé saisie côté client, stockage localStorage à des fins de développement seulement).
-- Commande UI-less: action `action(event)` affichant une notification dans l’élément courant.
+  - Accueil “Hello world”, affichage du sujet du message courant
+  - Démo d’appel API OpenAI (clé saisie côté client, stockage localStorage en DEV uniquement)
+  - Lister les prochains rendez-vous (7 jours) via Microsoft Graph après auth MSAL (Dialog)
+  - Récupérer les catégories utilisateur Outlook (master categories)
+- Commande UI-less: `action(event)` affichant une notification dans l’élément courant
 
 ## Prérequis
 
-- Windows et Outlook Desktop (Microsoft 365)
+- Windows et Outlook (Desktop ou OWA selon tests)
 - Node.js LTS et npm
-- Accès administrateur pour approuver les certificats de développement si nécessaire
+- Droits admin recommandés pour approuver les certificats de dev et l’exemption loopback WebView2
 
 ## Installation
 
 Depuis la racine du dépôt:
 
 ```bash
-cd "My Office Add-in"
 npm install
 ```
 
 ## Démarrage (développement)
 
-Lancement du serveur local + sideload de l’add-in dans Outlook:
+Lancer le serveur local + sideload de l’add-in dans Outlook:
 
 ```bash
 npm run start
@@ -41,68 +42,88 @@ npm run start
 
 Notes:
 
-- Le serveur se lance en HTTPS sur le port défini dans `package.json > config.dev_server_port` (3001). Le manifeste référence `https://localhost:3001`.
-- Pour arrêter et décharger l’add-in d’Outlook:
+- Dev-server en HTTPS sur `https://localhost:3001/`
+- Arrêter/décharger l’add-in:
 
 ```bash
 npm run stop
 ```
 
+Serveur seul (sans sideload):
+
+```bash
+npm run dev-server
+```
+
 ## Scripts npm utiles
 
-- `dev-server`: lance uniquement le serveur webpack en mode dev (sans sideload)
-- `build:dev`: build en mode développement (source maps)
-- `build`: build en mode production
-- `watch`: build incrémental en mode dev
+- `dev-server`: lance uniquement le serveur webpack (HTTPS)
+- `build:dev`: build dev (source maps)
+- `build`: build prod
+- `watch`: build incrémental
 - `validate`: valide le manifeste XML
-- `lint` / `lint:fix` / `prettier`: qualité et formatage du code
-- `signin` / `signout`: connexion/déconnexion M365 pour les outils de debug
+- `lint` / `lint:fix` / `prettier`: qualité et formatage
+- `signin` / `signout`: connexion/déconnexion M365 pour les outils Office Add-in
 
-## Structure du projet
+## Structure du projet (racine)
 
 ```
 Firstaddin/
-  └─ My Office Add-in/
-      ├─ src/
-      │  ├─ taskpane/            # UI du volet (HTML/CSS/JS)
-      │  └─ commands/            # Commandes UI-less (FunctionFile)
-      ├─ assets/                 # Icônes et images
-      ├─ manifest-xml-out/
-      │  └─ manifest.xml         # Manifeste consommé par les scripts de debug
-      ├─ webpack.config.js       # Bundling + dev-server HTTPS
-      ├─ babel.config.json       # Transpilation cible
-      └─ package.json            # Scripts et dépendances
+  ├─ src/
+  │  ├─ taskpane/
+  │  │  ├─ taskpane.html / .css / .js
+  │  │  ├─ auth.html           # Auth MSAL (Dialog)
+  │  │  └─ auth2.html          # Variante d’auth pour contourner le cache
+  │  └─ commands/
+  ├─ assets/
+  ├─ manifest-xml-out/
+  │  └─ manifest.xml           # Manifeste utilisé par les scripts de debug
+  ├─ dist/                     # Sortie webpack
+  ├─ webpack.config.js         # Bundling + dev-server HTTPS
+  └─ package.json
 ```
 
 Entrées Webpack principales:
 
 - `taskpane`: `src/taskpane/taskpane.js` + `src/taskpane/taskpane.html`
 - `commands`: `src/commands/commands.js` (servi via `commands.html`)
+- Pages statiques servies: `auth.html`, `auth2.html`
 
-## Développement
+## Authentification (MSAL) et Microsoft Graph
 
-- Logique Outlook (lecture/écriture de l’item courant): `src/taskpane/taskpane.js`
-- UI et styles du volet: `src/taskpane/taskpane.html` et `src/taskpane/taskpane.css`
-- Commandes UI-less (exécution sans UI): `src/commands/commands.js` (associées via `Office.actions.associate`)
-- Icônes/visuels: `assets/` (référencés par le manifeste)
+- Dialog: `Office.context.ui.displayDialogAsync(https://localhost:3001/auth2.html?clientId=...)`
+- MSAL Browser (2.x):
+  - `redirectUri`: `https://localhost:3001/auth2.html` (ou `auth.html`)
+  - `navigateToLoginRequestUrl: false`
+  - `system.allowRedirectInIframe: true`, `cache.storeAuthStateInCookie: true`
+  - Fallback popup: `loginPopup`/`acquireTokenPopup` si `Silent` échoue (interaction_required/consent_required)
+- Scopes Graph requis: `User.Read`, `Calendars.Read`
+- App registration (Entra ID): ajouter des URIs de redirection exactes selon le port/page utilisés:
+  - `https://localhost:3001/auth.html`
+  - `https://localhost:3001/auth2.html`
 
-Astuce: la page de task pane inclut Office.js depuis le CDN; le code s’initialise sur `Office.onReady`.
+## Catégories Outlook (master categories)
+
+- Bouton “Récupérer les catégories”: appelle `Office.context.mailbox.masterCategories.getAsync`
+- Exigences:
+  - Requirements Mailbox 1.8
+  - Permissions du manifeste: `ReadWriteMailbox` (déjà configuré)
 
 ## Manifeste (manifest.xml)
 
-Fichier: `My Office Add-in/manifest-xml-out/manifest.xml`
+Fichier: `manifest-xml-out/manifest.xml`
 
 - Hôte: Outlook (`Mailbox`)
-- URL du task pane: `https://localhost:3001/taskpane.html`
-- URL du FunctionFile (commandes): `https://localhost:3001/commands.html`
+- Task Pane: `https://localhost:3001/taskpane.html`
+- FunctionFile: `https://localhost:3001/commands.html`
 - Icônes: `https://localhost:3001/assets/...`
-- Permissions: `ReadWriteItem`
+- Requirements: Mailbox ≥ 1.8
+- Permissions: `ReadWriteMailbox`
 - Règles d’activation: Message (Read/Compose)
 
 Valider le manifeste:
 
 ```bash
-cd "My Office Add-in"
 npm run validate
 ```
 
@@ -120,15 +141,14 @@ Production:
 npm run build
 ```
 
-La sortie webpack (par défaut `dist/`) est servable statiquement en HTTPS.
+La sortie webpack (`dist/`) est servable en HTTPS.
 
-## Déploiement
+## Dépannage
 
-1. Héberger les fichiers générés (`dist/`) sur une origine HTTPS publique.
-2. Mettre à jour le manifeste pour que `Taskpane.Url`, `Commands.Url`, `IconUrl` et `HighResolutionIconUrl` pointent vers votre domaine de production.
-3. Distribuer le manifeste (catalogue d’organisation, Centre d’administration, ou Store).
-
-Astuce: `webpack.config.js` expose une constante `urlProd` à ajuster si vous souhaitez automatiser certaines substitutions, mais le manifeste XML doit être mis à jour explicitement.
+- Boucle auth bloquée: vérifier que la page servie est bien `auth2.html` récente (voir le code source: présence de `id="status"`, mentions `loginPopup/acquireTokenPopup`).
+- Exemption loopback WebView2: autoriser si demandé. En cas d’échec, relancer la commande en admin.
+- Port 3001 occupé: `npx kill-port 3001` puis relancer `npm run dev-server`.
+- Sous-module accidentel: le dossier `My Office Add-in/` est un dépôt imbriqué; si non désiré dans l’index Git: `git rm --cached "My Office Add-in"`.
 
 ## Qualité du code
 
@@ -138,24 +158,12 @@ npm run lint:fix
 npm run prettier
 ```
 
-## Sécurité
-
-- La démo `taskpane` inclut un test d’appel à l’API OpenAI avec stockage de la clé en `localStorage` (usage DEV uniquement). Ne pas utiliser ce mécanisme en production.
-- Toujours servir en HTTPS et limiter les domaines autorisés dans le manifeste.
-
-## Dépannage
-
-- L’add-in ne se charge pas: vérifier que le serveur écoute sur `3001` et que le certificat est approuvé.
-- Icons ou HTML non trouvés: aligner les chemins dans le manifeste avec le domaine/port effectif.
-- Changement de port: mettre à jour `package.json > config.dev_server_port`, `webpack.config.js` (port déjà synchronisé via npm config), et le manifeste si nécessaire.
-- Nettoyer le sideload: `npm run stop` puis redémarrer Outlook.
-
 ## Liens utiles
 
-- Documentation Office Add-ins: [learn.microsoft.com/office/dev/add-ins](https://learn.microsoft.com/office/dev/add-ins/)
-- Déboguer des compléments Office: [learn.microsoft.com/office/dev/add-ins/testing/test-debug-office-add-ins](https://learn.microsoft.com/office/dev/add-ins/testing/test-debug-office-add-ins)
+- Office Add-ins: https://learn.microsoft.com/office/dev/add-ins/
+- Debug Office Add-ins: https://learn.microsoft.com/office/dev/add-ins/testing/test-debug-office-add-ins
 
 ## Licence
 
-MIT (voir `license` dans `package.json`)
+MIT
 
