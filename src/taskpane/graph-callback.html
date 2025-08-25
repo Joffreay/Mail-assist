@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentification Microsoft Graph</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 30px;
+            background: linear-gradient(135deg, #0078d4, #106ebe);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        h1 {
+            color: #323130;
+            margin-bottom: 20px;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .status {
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #dff6dd;
+            color: #107c10;
+            border: 1px solid #107c10;
+        }
+
+        .status.error {
+            background: #fde7e9;
+            color: #d13438;
+            border: 1px solid #d13438;
+        }
+
+        .status.loading {
+            background: #e1f3ff;
+            color: #0078d4;
+            border: 1px solid #0078d4;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0078d4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .btn {
+            background: #0078d4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            margin: 10px;
+        }
+
+        .btn:hover {
+            background: #106ebe;
+        }
+
+        .btn:disabled {
+            background: #a19f9d;
+            cursor: not-allowed;
+        }
+
+        .details {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .details h3 {
+            color: #323130;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e1e1e1;
+        }
+
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 500;
+            color: #605e5c;
+        }
+
+        .detail-value {
+            color: #323130;
+            word-break: break-all;
+        }
+
+        .permissions {
+            background: #f0f8ff;
+            border: 1px solid #0078d4;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .permissions h4 {
+            color: #0078d4;
+            margin-bottom: 10px;
+        }
+
+        .permission-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            color: #323130;
+        }
+
+        .permission-item::before {
+            content: "✓";
+            color: #107c10;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .error-details {
+            background: #fde7e9;
+            border: 1px solid #d13438;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .error-details h4 {
+            color: #d13438;
+            margin-bottom: 10px;
+        }
+
+        .error-message {
+            color: #d13438;
+            font-family: monospace;
+            font-size: 14px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">M</div>
+        <h1>Authentification Microsoft Graph</h1>
+        
+        <div id="status" class="status loading">
+            <span class="spinner"></span>
+            <span id="statusText">Initialisation de l'authentification...</span>
+        </div>
+
+        <div id="details" class="details" style="display: none;">
+            <h3>Informations de connexion</h3>
+            <div class="detail-item">
+                <span class="detail-label">Utilisateur :</span>
+                <span id="userName" class="detail-value">-</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Email :</span>
+                <span id="userEmail" class="detail-value">-</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Tenant :</span>
+                <span id="tenantId" class="detail-value">-</span>
+            </div>
+        </div>
+
+        <div id="permissions" class="permissions" style="display: none;">
+            <h4>Permissions accordées</h4>
+            <div class="permission-item">Lecture et écriture des emails</div>
+            <div class="permission-item">Accès aux dossiers de boîte de réception</div>
+            <div class="permission-item">Gestion des paramètres de boîte de réception</div>
+            <div class="permission-item">Accès aux informations utilisateur</div>
+        </div>
+
+        <div id="errorDetails" class="error-details" style="display: none;">
+            <h4>Détails de l'erreur</h4>
+            <div id="errorMessage" class="error-message">-</div>
+        </div>
+
+        <div id="actions" style="display: none;">
+            <button id="retryBtn" class="btn">Réessayer</button>
+            <button id="closeBtn" class="btn">Fermer</button>
+        </div>
+    </div>
+
+    <script>
+        class GraphAuthCallback {
+            constructor() {
+                this.statusElement = document.getElementById('status');
+                this.statusTextElement = document.getElementById('statusText');
+                this.detailsElement = document.getElementById('details');
+                this.permissionsElement = document.getElementById('permissions');
+                this.errorDetailsElement = document.getElementById('errorDetails');
+                this.actionsElement = document.getElementById('actions');
+                
+                this.retryBtn = document.getElementById('retryBtn');
+                this.closeBtn = document.getElementById('closeBtn');
+                
+                this.setupEventListeners();
+                this.processCallback();
+            }
+
+            setupEventListeners() {
+                this.retryBtn.addEventListener('click', () => this.retryAuth());
+                this.closeBtn.addEventListener('click', () => this.closeWindow());
+            }
+
+            async processCallback() {
+                try {
+                    this.updateStatus('loading', 'Traitement de la réponse d\'authentification...');
+                    
+                    // Récupérer les paramètres de l'URL
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const code = urlParams.get('code');
+                    const error = urlParams.get('error');
+                    const errorDescription = urlParams.get('error_description');
+                    const state = urlParams.get('state');
+
+                    if (error) {
+                        throw new Error(`${error}: ${errorDescription || 'Erreur inconnue'}`);
+                    }
+
+                    if (!code) {
+                        throw new Error('Code d\'autorisation manquant dans la réponse');
+                    }
+
+                    // Simuler l'échange du code contre un token (en production, cela se fait côté serveur)
+                    this.updateStatus('loading', 'Échange du code d\'autorisation...');
+                    
+                    // Envoyer le code au parent (add-in Office)
+                    const message = {
+                        type: 'auth_success',
+                        code: code,
+                        state: state
+                    };
+
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage(message, '*');
+                        this.updateStatus('success', 'Authentification réussie ! Redirection...');
+                        
+                        // Attendre un peu avant de fermer
+                        setTimeout(() => {
+                            this.closeWindow();
+                        }, 2000);
+                    } else {
+                        // Mode standalone pour les tests
+                        this.showSuccessMessage(code, state);
+                    }
+
+                } catch (error) {
+                    console.error('Erreur lors du traitement du callback:', error);
+                    this.showError(error.message);
+                }
+            }
+
+            showSuccessMessage(code, state) {
+                this.updateStatus('success', 'Authentification réussie !');
+                this.detailsElement.style.display = 'block';
+                this.permissionsElement.style.display = 'block';
+                this.actionsElement.style.display = 'block';
+                
+                // Afficher les informations (simulées)
+                document.getElementById('userName').textContent = 'Utilisateur connecté';
+                document.getElementById('userEmail').textContent = 'user@company.com';
+                document.getElementById('tenantId').textContent = 'tenant-id';
+                
+                this.statusTextElement.textContent = 'Vous pouvez maintenant fermer cette fenêtre.';
+            }
+
+            showError(message) {
+                this.updateStatus('error', 'Échec de l\'authentification');
+                this.errorDetailsElement.style.display = 'block';
+                this.actionsElement.style.display = 'block';
+                
+                document.getElementById('errorMessage').textContent = message;
+                this.statusTextElement.textContent = 'Une erreur s\'est produite lors de l\'authentification.';
+            }
+
+            updateStatus(type, text) {
+                this.statusElement.className = `status ${type}`;
+                this.statusTextElement.textContent = text;
+            }
+
+            retryAuth() {
+                // Rediriger vers la page d'authentification
+                const currentUrl = new URL(window.location.href);
+                const clientId = currentUrl.searchParams.get('client_id') || 
+                                localStorage.getItem('msal_client_id') || 
+                                'your-client-id';
+                
+                const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?` +
+                    `client_id=${encodeURIComponent(clientId)}` +
+                    `&response_type=code` +
+                    `&redirect_uri=${encodeURIComponent(window.location.href)}` +
+                    `&scope=${encodeURIComponent('openid profile email Mail.ReadWrite Mail.ReadWrite.Shared MailboxSettings.ReadWrite User.Read')}` +
+                    `&response_mode=query` +
+                    `&state=${Date.now()}`;
+
+                window.location.href = authUrl;
+            }
+
+            closeWindow() {
+                if (window.opener) {
+                    window.close();
+                } else if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'close_auth_window' }, '*');
+                } else {
+                    // Fallback pour les navigateurs qui ne supportent pas window.close()
+                    this.updateStatus('success', 'Fenêtre fermée');
+                }
+            }
+        }
+
+        // Initialiser l'application quand le DOM est chargé
+        document.addEventListener('DOMContentLoaded', () => {
+            new GraphAuthCallback();
+        });
+
+        // Gestion des messages du parent
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'close_auth_window') {
+                window.close();
+            }
+        });
+    </script>
+</body>
+</html>

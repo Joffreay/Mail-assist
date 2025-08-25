@@ -1,161 +1,309 @@
-## Mail-assist — Complément Outlook (Task Pane + Commandes)
+# Office Add-in Task Pane - Assistant IA Intégré
 
-Projet de complément Office pour Outlook, basé sur Webpack 5, Babel et Office.js. Le code applicatif se trouve dans le dossier `My Office Add-in/`.
+## 📋 Description
 
-## Aperçu
+Cet Office Add-in pour Outlook intègre des fonctionnalités d'intelligence artificielle via OpenAI et Microsoft Graph pour améliorer la productivité des utilisateurs. Il permet la génération automatique de réponses d'email, la gestion des calendriers, et l'analyse intelligente du contenu des messages.
 
-- Complément Outlook avec volet des tâches (task pane) et commandes UI-less
-- Pile technique: JavaScript, Webpack 5, Babel (`@babel/preset-env`), polyfills (`core-js`, `regenerator-runtime`), Office.js
-- Hébergement dev: HTTPS local via serveur webpack, sideload d’Outlook
-- Manifeste: XML pointant vers `https://localhost:3001`
+## ✨ Fonctionnalités Principales
 
-## Fonctionnalités
+### 🤖 Intégration OpenAI (ChatGPT)
+- **Génération de réponses automatiques** : Création de réponses professionnelles basées sur le contenu des emails
+- **Assistant IA conversationnel** : Interface de chat pour poser des questions et obtenir des réponses
+- **Analyse de contenu** : Extraction et analyse intelligente du contenu des messages
 
-- Volet Outlook (Task Pane):
-  - Accueil “Hello world”, affichage du sujet du message sélectionné.
-  - Démo d’appel API OpenAI (clé saisie côté client, stockage localStorage à des fins de développement seulement).
-- Commande UI-less: action `action(event)` affichant une notification dans l’élément courant.
+### 🔐 Authentification Microsoft Graph
+- **Connexion sécurisée** : Authentification OAuth2 avec Microsoft Identity Platform
+- **Gestion des tokens** : Gestion automatique des tokens d'accès et de rafraîchissement
+- **Sécurité renforcée** : Protection CSRF et validation des états de sécurité
 
-## Prérequis
+### 📅 Gestion des Calendriers
+- **Synchronisation des événements** : Récupération des rendez-vous via Microsoft Graph
+- **Vue calendrier** : Affichage des événements à venir dans les 7 prochains jours
+- **Intégration Outlook** : Utilisation native des fonctionnalités Outlook
 
-- Windows et Outlook Desktop (Microsoft 365)
-- Node.js LTS et npm
-- Accès administrateur pour approuver les certificats de développement si nécessaire
+### 📧 Fonctionnalités Outlook
+- **Extraction de contenu** : Récupération automatique du sujet et du corps des emails
+- **Gestion des catégories** : Intégration avec le système de catégories Outlook
+- **Interface utilisateur native** : Design cohérent avec l'interface Office
 
-## Installation
+## 🚀 Installation et Configuration
 
-Depuis la racine du dépôt:
+### Prérequis
+- **Node.js** : Version 16 ou supérieure
+- **Office 365** : Compte Microsoft 365 avec Outlook
+- **Azure AD** : Application enregistrée pour Microsoft Graph (optionnel)
+- **OpenAI** : Clé API OpenAI pour les fonctionnalités IA
+
+### Installation
+
+1. **Cloner le repository**
+   ```bash
+   git clone <repository-url>
+   cd "My Office Add-in"
+   ```
+
+2. **Installer les dépendances**
+   ```bash
+   npm install
+   ```
+
+3. **Configuration des certificats de développement**
+   ```bash
+   npx office-addin-dev-certs install
+   ```
+
+4. **Configuration des variables d'environnement**
+   ```bash
+   cp config.env.example config.env
+   # Éditer config.env avec vos clés API
+   ```
+
+### Configuration Azure AD (Optionnel)
+
+1. **Créer une application dans Azure AD**
+   - Aller sur [Azure Portal](https://portal.azure.com)
+   - Créer une nouvelle application d'enregistrement
+   - Configurer les redirections URI
+
+2. **Configurer les permissions**
+   - `Mail.ReadWrite`
+   - `Calendars.Read`
+   - `User.Read`
+
+3. **Obtenir le Client ID**
+   - Copier l'ID d'application (Client ID)
+   - L'utiliser dans l'interface de l'add-in
+
+## 🛠️ Développement
+
+### Scripts NPM Disponibles
 
 ```bash
-cd "My Office Add-in"
-npm install
+# Développement
+npm run dev-server          # Démarrer le serveur de développement
+npm run build:dev          # Build en mode développement
+npm run watch              # Build en mode watch
+
+# Production
+npm run build              # Build de production
+npm run start              # Démarrer l'add-in
+
+# Utilitaires
+npm run lint               # Vérification du code
+npm run lint:fix           # Correction automatique du linting
+npm run validate           # Validation du manifest
+npm run signin             # Connexion M365
+npm run signout            # Déconnexion M365
+
+# Services
+npm run callback-server    # Démarrer le serveur de callback
+npm run webhook-server     # Démarrer le serveur webhook
+npm run start-all          # Démarrer tous les services
 ```
 
-## Démarrage (développement)
+### Structure du Projet
 
-Lancement du serveur local + sideload de l’add-in dans Outlook:
+```
+My Office Add-in/
+├── src/                          # Code source
+│   ├── taskpane/                # Interface principale
+│   │   ├── taskpane.js         # Logique principale
+│   │   ├── taskpane.html       # Interface utilisateur
+│   │   ├── taskpane.css        # Styles
+│   │   ├── graph-auth-service.js # Service d'authentification
+│   │   └── config.js           # Configuration
+│   ├── commands/                # Commandes du ruban
+│   │   ├── commands.js         # Logique des commandes
+│   │   └── commands.html       # Interface des commandes
+│   └── assets/                  # Ressources statiques
+├── manifest-xml-out/            # Manifest XML généré
+├── dist/                        # Fichiers compilés
+├── webpack.config.js            # Configuration Webpack
+├── server.js                    # Serveur webhook
+└── package.json                 # Dépendances et scripts
+```
 
+### Architecture du Code
+
+#### TaskPaneManager
+Classe principale qui gère l'initialisation et le cycle de vie de l'add-in.
+
+#### MicrosoftGraphAuthService
+Service dédié à l'authentification et à la gestion des tokens Microsoft Graph.
+
+#### Configuration Centralisée
+Fichier `config.js` qui centralise tous les paramètres et constantes de l'application.
+
+## 🔧 Configuration
+
+### Variables d'Environnement
+
+```env
+# OpenAI
+OPENAI_API_KEY=sk-your-api-key-here
+OPENAI_MODEL=gpt-4
+
+# Microsoft Graph
+GRAPH_CLIENT_ID=your-client-id
+GRAPH_TENANT_ID=your-tenant-id
+
+# Serveur
+PORT=8080
+NODE_ENV=development
+DEBUG=true
+```
+
+### Configuration Webpack
+
+Le fichier `webpack.config.js` gère :
+- Compilation Babel pour la compatibilité ES6+
+- Génération des pages HTML
+- Gestion des assets et certificats HTTPS
+- Configuration du serveur de développement
+
+## 📱 Utilisation
+
+### Interface Principale
+
+1. **Section OpenAI** : Saisir votre clé API et poser des questions
+2. **Actions Outlook** : Boutons pour afficher le sujet et générer des réponses
+3. **Calendrier** : Saisir votre Client ID Azure AD pour lister les événements
+
+### Fonctionnalités Clés
+
+#### Génération de Réponse Automatique
+1. Saisir votre clé API OpenAI
+2. Cliquer sur "Réponse automatique"
+3. L'IA analyse le contenu et génère une réponse appropriée
+4. La réponse s'ouvre dans un formulaire de réponse Outlook
+
+#### Consultation du Calendrier
+1. Saisir votre Client ID Azure AD
+2. Cliquer sur "Lister mes prochains RDV"
+3. S'authentifier via Microsoft Graph
+4. Consulter vos événements des 7 prochains jours
+
+## 🔒 Sécurité
+
+### Authentification
+- **OAuth2** : Utilisation du protocole standard Microsoft
+- **Tokens sécurisés** : Gestion automatique des tokens d'accès
+- **Validation d'état** : Protection contre les attaques CSRF
+
+### Données
+- **Stockage local** : Tokens stockés localement (développement uniquement)
+- **Chiffrement** : Communication HTTPS obligatoire
+- **Permissions minimales** : Accès limité aux données nécessaires
+
+### API Keys
+- **OpenAI** : Stockage local temporaire (à sécuriser en production)
+- **Azure AD** : Gestion sécurisée via Microsoft Identity Platform
+
+## 🧪 Tests
+
+### Tests Unitaires
 ```bash
+npm run test:unit
+```
+
+### Tests d'Intégration
+```bash
+npm run test:integration
+```
+
+### Tests End-to-End
+```bash
+npm run test:e2e
+```
+
+## 📦 Déploiement
+
+### Développement
+```bash
+npm run build:dev
 npm run start
 ```
 
-Notes:
-
-- Le serveur se lance en HTTPS sur le port défini dans `package.json > config.dev_server_port` (3001). Le manifeste référence `https://localhost:3001`.
-- Pour arrêter et décharger l’add-in d’Outlook:
-
-```bash
-npm run stop
-```
-
-## Scripts npm utiles
-
-- `dev-server`: lance uniquement le serveur webpack en mode dev (sans sideload)
-- `build:dev`: build en mode développement (source maps)
-- `build`: build en mode production
-- `watch`: build incrémental en mode dev
-- `validate`: valide le manifeste XML
-- `lint` / `lint:fix` / `prettier`: qualité et formatage du code
-- `signin` / `signout`: connexion/déconnexion M365 pour les outils de debug
-
-## Structure du projet
-
-```
-Firstaddin/
-  └─ My Office Add-in/
-      ├─ src/
-      │  ├─ taskpane/            # UI du volet (HTML/CSS/JS)
-      │  └─ commands/            # Commandes UI-less (FunctionFile)
-      ├─ assets/                 # Icônes et images
-      ├─ manifest-xml-out/
-      │  └─ manifest.xml         # Manifeste consommé par les scripts de debug
-      ├─ webpack.config.js       # Bundling + dev-server HTTPS
-      ├─ babel.config.json       # Transpilation cible
-      └─ package.json            # Scripts et dépendances
-```
-
-Entrées Webpack principales:
-
-- `taskpane`: `src/taskpane/taskpane.js` + `src/taskpane/taskpane.html`
-- `commands`: `src/commands/commands.js` (servi via `commands.html`)
-
-## Développement
-
-- Logique Outlook (lecture/écriture de l’item courant): `src/taskpane/taskpane.js`
-- UI et styles du volet: `src/taskpane/taskpane.html` et `src/taskpane/taskpane.css`
-- Commandes UI-less (exécution sans UI): `src/commands/commands.js` (associées via `Office.actions.associate`)
-- Icônes/visuels: `assets/` (référencés par le manifeste)
-
-Astuce: la page de task pane inclut Office.js depuis le CDN; le code s’initialise sur `Office.onReady`.
-
-## Manifeste (manifest.xml)
-
-Fichier: `My Office Add-in/manifest-xml-out/manifest.xml`
-
-- Hôte: Outlook (`Mailbox`)
-- URL du task pane: `https://localhost:3001/taskpane.html`
-- URL du FunctionFile (commandes): `https://localhost:3001/commands.html`
-- Icônes: `https://localhost:3001/assets/...`
-- Permissions: `ReadWriteItem`
-- Règles d’activation: Message (Read/Compose)
-
-Valider le manifeste:
-
-```bash
-cd "My Office Add-in"
-npm run validate
-```
-
-## Build
-
-Développement:
-
-```bash
-npm run build:dev
-```
-
-Production:
-
+### Production
 ```bash
 npm run build
+# Déployer le contenu du dossier dist/
 ```
 
-La sortie webpack (par défaut `dist/`) est servable statiquement en HTTPS.
+### Manifest XML
+Le manifest est généré au format XML pour une meilleure compatibilité avec les versions récentes d'Office.
 
-## Déploiement
+## 🐛 Dépannage
 
-1. Héberger les fichiers générés (`dist/`) sur une origine HTTPS publique.
-2. Mettre à jour le manifeste pour que `Taskpane.Url`, `Commands.Url`, `IconUrl` et `HighResolutionIconUrl` pointent vers votre domaine de production.
-3. Distribuer le manifeste (catalogue d’organisation, Centre d’administration, ou Store).
+### Problèmes Courants
 
-Astuce: `webpack.config.js` expose une constante `urlProd` à ajuster si vous souhaitez automatiser certaines substitutions, mais le manifeste XML doit être mis à jour explicitement.
+#### Erreur de Certificat HTTPS
+```bash
+npx office-addin-dev-certs install
+npx office-addin-dev-certs verify
+```
 
-## Qualité du code
+#### Erreur d'Authentification Graph
+- Vérifier que l'application Azure AD est correctement configurée
+- Contrôler les permissions et scopes
+- Vérifier les URIs de redirection
+
+#### Erreur OpenAI API
+- Vérifier la validité de la clé API
+- Contrôler les quotas et limites
+- Vérifier la connectivité réseau
+
+### Logs et Débogage
 
 ```bash
-npm run lint
-npm run lint:fix
-npm run prettier
+# Activer le mode debug
+DEBUG=true npm run dev-server
+
+# Consulter les logs du serveur
+npm run webhook-server
 ```
 
-## Sécurité
+## 🤝 Contribution
 
-- La démo `taskpane` inclut un test d’appel à l’API OpenAI avec stockage de la clé en `localStorage` (usage DEV uniquement). Ne pas utiliser ce mécanisme en production.
-- Toujours servir en HTTPS et limiter les domaines autorisés dans le manifeste.
+### Guidelines de Code
+- **ES6+** : Utilisation des fonctionnalités modernes JavaScript
+- **Commentaires** : Documentation JSDoc complète
+- **Linting** : Respect des règles ESLint
+- **Tests** : Couverture de tests pour les nouvelles fonctionnalités
 
-## Dépannage
+### Processus de Contribution
+1. Fork du repository
+2. Création d'une branche feature
+3. Développement et tests
+4. Pull request avec description détaillée
 
-- L’add-in ne se charge pas: vérifier que le serveur écoute sur `3001` et que le certificat est approuvé.
-- Icons ou HTML non trouvés: aligner les chemins dans le manifeste avec le domaine/port effectif.
-- Changement de port: mettre à jour `package.json > config.dev_server_port`, `webpack.config.js` (port déjà synchronisé via npm config), et le manifeste si nécessaire.
-- Nettoyer le sideload: `npm run stop` puis redémarrer Outlook.
+## 📄 Licence
 
-## Liens utiles
+Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
-- Documentation Office Add-ins: [learn.microsoft.com/office/dev/add-ins](https://learn.microsoft.com/office/dev/add-ins/)
-- Déboguer des compléments Office: [learn.microsoft.com/office/dev/add-ins/testing/test-debug-office-add-ins](https://learn.microsoft.com/office/dev/add-ins/testing/test-debug-office-add-ins)
+## 🙏 Remerciements
 
-## Licence
+- **Microsoft** : Pour l'infrastructure Office Add-ins
+- **OpenAI** : Pour l'API d'intelligence artificielle
+- **Communauté** : Pour les contributions et retours
 
-MIT (voir `license` dans `package.json`)
+## 📞 Support
+
+### Documentation
+- [Documentation Office Add-ins](https://docs.microsoft.com/office/dev/add-ins/)
+- [Microsoft Graph API](https://docs.microsoft.com/graph/)
+- [OpenAI API](https://platform.openai.com/docs/)
+
+### Issues
+Pour signaler un bug ou demander une fonctionnalité, utilisez les [Issues GitHub](https://github.com/your-repo/issues).
+
+### Contact
+- **Email** : support@your-domain.com
+- **Discord** : [Serveur communautaire](https://discord.gg/your-server)
+
+---
+
+**Version** : 1.0.0  
+**Dernière mise à jour** : Décembre 2024  
+**Compatibilité** : Office 365, Outlook Desktop/Web
 

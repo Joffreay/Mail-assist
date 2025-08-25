@@ -1,6 +1,7 @@
 {
   "name": "office-addin-taskpane-js",
   "version": "0.0.1",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/OfficeDev/Office-Addin-TaskPane-JS.git"
@@ -23,10 +24,22 @@
     "start": "office-addin-debugging start manifest-xml-out/manifest.xml",
     "stop": "office-addin-debugging stop manifest-xml-out/manifest.xml",
     "validate": "office-addin-manifest validate manifest-xml-out/manifest.xml",
-    "watch": "webpack --mode development --watch"
+    "watch": "webpack --mode development --watch",
+    "callback-server": "node callback-server.js",
+    "webhook-server": "node webhook-server.js",
+    "subscription-renewal": "node subscription-renewal.js",
+    "delta-query": "node delta-query.js",
+    "create-subscription": "node create-subscription.js",
+    "start-all": ".\\start-all-services.ps1"
   },
   "dependencies": {
+    "@azure/identity": "^4.0.1",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "body-parser": "^1.20.2",
     "core-js": "^3.36.0",
+    "express": "^5.1.0",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^3.3.2",
     "regenerator-runtime": "^0.14.1"
   },
   "devDependencies": {

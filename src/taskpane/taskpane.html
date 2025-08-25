@@ -12,6 +12,8 @@
 
     <!-- Office JavaScript API -->
     <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <!-- MSAL Browser (pour authentifier sur Microsoft Graph) -->
+    <script type="text/javascript" src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
 
     <!-- For more information on Fluent UI, visit https://developer.microsoft.com/fluentui#/. -->
     <link rel="stylesheet" href="https://res-1.cdn.office.net/files/fabric-cdn-prod_20230815.002/office-ui-fabric-core/11.1.0/css/fabric.min.css"/>
@@ -22,15 +24,12 @@
 
 <body class="ms-font-m ms-welcome ms-Fabric">
     <header class="ms-welcome__header ms-bgColor-neutralLighter">
-        <img width="90" height="90" src="../../assets/logo-filled.png" alt="Contoso" title="Contoso" />
-        <h1 class="ms-font-su">Page d'accueil - Hello world</h1>
+        <h1 class="ms-font-su" style="margin:0;">Bienvenue</h1>
     </header>
     <section id="sideload-msg" class="ms-welcome__main">
         <h2 class="ms-font-xl">Please <a target="_blank" href="https://learn.microsoft.com/office/dev/add-ins/testing/test-debug-office-add-ins#sideload-an-office-add-in-for-testing">sideload</a> your add-in to see app body.</h2>
     </section>
     <main id="app-body" class="ms-welcome__main" style="display: none;">
-        <h2 class="ms-font-xl">Bienvenue</h2>
-        <p id="hello-text" class="ms-font-l">Hello world</p>
 
         <section class="card">
             <h3 class="ms-font-l">Tester l'API OpenAI (ChatGPT)</h3>
@@ -55,10 +54,32 @@
 
         <section class="card">
             <h3 class="ms-font-l">Actions Outlook</h3>
-            <button id="run" class="btn-primary">Afficher le sujet</button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button id="run" class="btn-primary">Afficher le sujet</button>
+                <button id="auto-reply" class="btn-secondary">Réponse automatique</button>
+            </div>
             <p id="item-subject" class="ms-font-m" style="margin-top:8px;"></p>
         </section>
+
+        <section class="card">
+            <h3 class="ms-font-l">Mes prochains rendez-vous</h3>
+            <div class="stack">
+                <div class="stack" style="gap:6px;">
+                    <label class="ms-font-m" for="msal-client-id">Client ID (Azure AD) — requis pour Microsoft Graph</label>
+                    <input id="msal-client-id" class="input" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+                </div>
+                <button id="list-events" class="btn-primary">Lister mes prochains RDV</button>
+                <div id="events-output" class="output" style="min-height: 40px;">Aucune donnée.</div>
+            </div>
+        </section>
     </main>
+    
+    <!-- Scripts de l'add-in -->
+    <script src="config.js"></script>
+    <script src="admin-consent-config.js"></script>
+    <script src="graph-auth-service.js"></script>
+    <script src="admin-consent-service.js"></script>
+    <script src="taskpane.js"></script>
 </body>
 
 </html>

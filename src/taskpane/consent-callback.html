@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consentement Administrateur - Microsoft Graph</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 30px;
+            background: linear-gradient(135deg, #0078d4, #106ebe);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        h1 {
+            color: #323130;
+            margin-bottom: 20px;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            color: #605e5c;
+            margin-bottom: 30px;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .status {
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #dff6dd;
+            color: #107c10;
+            border: 1px solid #107c10;
+        }
+
+        .status.error {
+            background: #fde7e9;
+            color: #d13438;
+            border: 1px solid #d13438;
+        }
+
+        .status.loading {
+            background: #e1f3ff;
+            color: #0078d4;
+            border: 1px solid #0078d4;
+        }
+
+        .status.warning {
+            background: #fff4ce;
+            color: #856404;
+            border: 1px solid #856404;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0078d4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .btn {
+            background: #0078d4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            margin: 10px;
+        }
+
+        .btn:hover {
+            background: #106ebe;
+        }
+
+        .btn:disabled {
+            background: #a19f9d;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #605e5c;
+        }
+
+        .btn-secondary:hover {
+            background: #4c4a48;
+        }
+
+        .details {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .details h3 {
+            color: #323130;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e1e1e1;
+        }
+
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 500;
+            color: #605e5c;
+        }
+
+        .detail-value {
+            color: #323130;
+            word-break: break-all;
+            max-width: 60%;
+        }
+
+        .permissions {
+            background: #f0f8ff;
+            border: 1px solid #0078d4;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .permissions h4 {
+            color: #0078d4;
+            margin-bottom: 10px;
+        }
+
+        .permission-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            color: #323130;
+        }
+
+        .permission-item::before {
+            content: "✓";
+            color: #107c10;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .error-details {
+            background: #fde7e9;
+            border: 1px solid #d13438;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .error-details h4 {
+            color: #d13438;
+            margin-bottom: 10px;
+        }
+
+        .error-message {
+            color: #d13438;
+            font-family: monospace;
+            font-size: 14px;
+            word-break: break-all;
+        }
+
+        .info-box {
+            background: #e1f3ff;
+            border: 1px solid #0078d4;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .info-box h4 {
+            color: #0078d4;
+            margin-bottom: 10px;
+        }
+
+        .info-text {
+            color: #323130;
+            line-height: 1.5;
+        }
+
+        .url-display {
+            background: #f8f9fa;
+            border: 1px solid #e1e1e1;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 14px;
+            word-break: break-all;
+            color: #323130;
+        }
+
+        .copy-btn {
+            background: #605e5c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: background 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: #4c4a48;
+        }
+
+        .copy-btn:active {
+            background: #323130;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">A</div>
+        <h1>Consentement Administrateur</h1>
+        <p class="subtitle">
+            Cette page gère le consentement administrateur pour l'application Microsoft Graph.<br>
+            Elle permet d'accorder les permissions nécessaires pour tous les utilisateurs du tenant.
+        </p>
+        
+        <div id="status" class="status loading">
+            <span class="spinner"></span>
+            <span id="statusText">Traitement du consentement administrateur...</span>
+        </div>
+
+        <div id="infoBox" class="info-box" style="display: none;">
+            <h4>📋 Informations importantes</h4>
+            <div class="info-text">
+                <p><strong>Qu'est-ce que le consentement administrateur ?</strong></p>
+                <p>Le consentement administrateur permet d'accorder des permissions à une application pour tous les utilisateurs d'un tenant Azure AD, sans que chaque utilisateur ait besoin de donner son consentement individuellement.</p>
+                
+                <p><strong>Quand l'utiliser ?</strong></p>
+                <p>• Pour des applications internes à l'organisation<br>
+                • Pour des applications qui nécessitent des permissions élevées<br>
+                • Pour éviter les demandes de consentement répétées</p>
+            </div>
+        </div>
+
+        <div id="details" class="details" style="display: none;">
+            <h3>Détails du consentement</h3>
+            <div class="detail-item">
+                <span class="detail-label">Tenant ID :</span>
+                <span id="tenantId" class="detail-value">-</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Client ID :</span>
+                <span id="clientId" class="detail-value">-</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">État :</span>
+                <span id="consentState" class="detail-value">-</span>
+            </div>
+        </div>
+
+        <div id="permissions" class="permissions" style="display: none;">
+            <h4>Permissions accordées</h4>
+            <div class="permission-item">Lecture et écriture des emails (Mail.ReadWrite)</div>
+            <div class="permission-item">Accès aux dossiers partagés (Mail.ReadWrite.Shared)</div>
+            <div class="permission-item">Gestion des paramètres de boîte de réception (MailboxSettings.ReadWrite)</div>
+            <div class="permission-item">Lecture des informations utilisateur (User.Read)</div>
+            <div class="permission-item">Accès aux calendriers (Calendars.ReadWrite)</div>
+        </div>
+
+        <div id="errorDetails" class="error-details" style="display: none;">
+            <h4>Détails de l'erreur</h4>
+            <div id="errorMessage" class="error-message">-</div>
+        </div>
+
+        <div id="urlSection" class="info-box" style="display: none;">
+            <h4>🔗 URL de consentement administrateur</h4>
+            <p class="info-text">Utilisez cette URL pour accorder le consentement administrateur :</p>
+                    <div class="url-display" id="adminConsentUrl">
+            https://login.microsoftonline.com/{TENANT_ID}/v2.0/adminconsent?client_id={APP_CLIENT_ID}&scope=https://graph.microsoft.com/.default&redirect_uri=https://localhost:3002/consent-callback.html
+        </div>
+            <button class="copy-btn" onclick="copyUrl()">Copier l'URL</button>
+        </div>
+
+        <div id="actions" style="display: none;">
+            <button id="retryBtn" class="btn">Réessayer</button>
+            <button id="adminConsentBtn" class="btn">Accorder le consentement</button>
+            <button id="closeBtn" class="btn btn-secondary">Fermer</button>
+        </div>
+    </div>
+
+    <script>
+        class AdminConsentCallback {
+            constructor() {
+                this.statusElement = document.getElementById('status');
+                this.statusTextElement = document.getElementById('statusText');
+                this.detailsElement = document.getElementById('details');
+                this.permissionsElement = document.getElementById('permissions');
+                this.errorDetailsElement = document.getElementById('errorDetails');
+                this.actionsElement = document.getElementById('actions');
+                this.infoBoxElement = document.getElementById('infoBox');
+                this.urlSectionElement = document.getElementById('urlSection');
+                
+                this.retryBtn = document.getElementById('retryBtn');
+                this.adminConsentBtn = document.getElementById('adminConsentBtn');
+                this.closeBtn = document.getElementById('closeBtn');
+                
+                this.setupEventListeners();
+                this.processCallback();
+            }
+
+            setupEventListeners() {
+                this.retryBtn.addEventListener('click', () => this.retryConsent());
+                this.adminConsentBtn.addEventListener('click', () => this.openAdminConsent());
+                this.closeBtn.addEventListener('click', () => this.closeWindow());
+            }
+
+            async processCallback() {
+                try {
+                    this.updateStatus('loading', 'Traitement du consentement administrateur...');
+                    
+                    // Récupérer les paramètres de l'URL
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const adminConsent = urlParams.get('admin_consent');
+                    const tenant = urlParams.get('tenant');
+                    const error = urlParams.get('error');
+                    const errorDescription = urlParams.get('error_description');
+
+                    if (error) {
+                        throw new Error(`${error}: ${errorDescription || 'Erreur inconnue'}`);
+                    }
+
+                    // Afficher les informations de base
+                    this.infoBoxElement.style.display = 'block';
+                    this.urlSectionElement.style.display = 'block';
+
+                    if (adminConsent === 'True' && tenant) {
+                        // Consentement administrateur réussi
+                        this.showSuccessMessage(tenant);
+                    } else if (adminConsent === 'False') {
+                        // Consentement refusé
+                        this.showRefusedMessage(tenant);
+                    } else {
+                        // Aucun consentement encore accordé
+                        this.showPendingMessage();
+                    }
+
+                } catch (error) {
+                    console.error('Erreur lors du traitement du callback:', error);
+                    this.showError(error.message);
+                }
+            }
+
+            showSuccessMessage(tenant) {
+                this.updateStatus('success', 'Consentement administrateur accordé avec succès !');
+                this.detailsElement.style.display = 'block';
+                this.permissionsElement.style.display = 'block';
+                this.actionsElement.style.display = 'block';
+                
+                // Afficher les détails
+                document.getElementById('tenantId').textContent = tenant || 'N/A';
+                document.getElementById('clientId').textContent = this.getClientIdFromUrl() || 'N/A';
+                document.getElementById('consentState').textContent = 'Accordé';
+                
+                this.statusTextElement.textContent = 'Le consentement administrateur a été accordé avec succès. L\'application peut maintenant être utilisée par tous les utilisateurs du tenant.';
+                
+                // Masquer le bouton de consentement
+                this.adminConsentBtn.style.display = 'none';
+            }
+
+            showRefusedMessage(tenant) {
+                this.updateStatus('warning', 'Consentement administrateur refusé');
+                this.detailsElement.style.display = 'block';
+                this.actionsElement.style.display = 'block';
+                
+                // Afficher les détails
+                document.getElementById('tenantId').textContent = tenant || 'N/A';
+                document.getElementById('clientId').textContent = this.getClientIdFromUrl() || 'N/A';
+                document.getElementById('consentState').textContent = 'Refusé';
+                
+                this.statusTextElement.textContent = 'Le consentement administrateur a été refusé. Vous pouvez réessayer ou contacter votre administrateur Azure AD.';
+            }
+
+            showPendingMessage() {
+                this.updateStatus('loading', 'En attente du consentement administrateur');
+                this.detailsElement.style.display = 'block';
+                this.actionsElement.style.display = 'block';
+                
+                // Afficher les détails
+                document.getElementById('tenantId').textContent = 'En attente...';
+                document.getElementById('clientId').textContent = this.getClientIdFromUrl() || 'N/A';
+                document.getElementById('consentState').textContent = 'En attente';
+                
+                this.statusTextElement.textContent = 'Aucun consentement administrateur n\'a encore été accordé. Utilisez le bouton ci-dessous pour accorder le consentement.';
+            }
+
+            showError(message) {
+                this.updateStatus('error', 'Erreur lors du consentement administrateur');
+                this.errorDetailsElement.style.display = 'block';
+                this.actionsElement.style.display = 'block';
+                
+                document.getElementById('errorMessage').textContent = message;
+                this.statusTextElement.textContent = 'Une erreur s\'est produite lors du traitement du consentement administrateur.';
+            }
+
+            updateStatus(type, text) {
+                this.statusElement.className = `status ${type}`;
+                this.statusTextElement.textContent = text;
+            }
+
+            getClientIdFromUrl() {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('client_id') || 'N/A';
+            }
+
+            retryConsent() {
+                // Rediriger vers la page de consentement administrateur
+                const clientId = this.getClientIdFromUrl();
+                if (clientId && clientId !== 'N/A') {
+                    this.openAdminConsent();
+                } else {
+                    alert('Client ID non disponible. Veuillez vérifier la configuration.');
+                }
+            }
+
+            openAdminConsent() {
+                const clientId = this.getClientIdFromUrl();
+                if (clientId && clientId !== 'N/A') {
+                    const adminConsentUrl = `https://login.microsoftonline.com/common/v2.0/adminconsent?client_id=${encodeURIComponent(clientId)}&scope=https://graph.microsoft.com/.default&redirect_uri=${encodeURIComponent(window.location.href)}`;
+                    window.open(adminConsentUrl, '_blank');
+                } else {
+                    alert('Client ID non disponible. Veuillez vérifier la configuration.');
+                }
+            }
+
+            closeWindow() {
+                if (window.opener) {
+                    window.close();
+                } else if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'close_consent_window' }, '*');
+                } else {
+                    // Fallback pour les navigateurs qui ne supportent pas window.close()
+                    this.updateStatus('success', 'Fenêtre fermée');
+                }
+            }
+        }
+
+        // Fonction pour copier l'URL
+        function copyUrl() {
+            const urlElement = document.getElementById('adminConsentUrl');
+            const textToCopy = urlElement.textContent;
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    const copyBtn = document.querySelector('.copy-btn');
+                    const originalText = copyBtn.textContent;
+                    copyBtn.textContent = 'Copié !';
+                    copyBtn.style.background = '#107c10';
+                    
+                    setTimeout(() => {
+                        copyBtn.textContent = originalText;
+                        copyBtn.style.background = '#605e5c';
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Erreur lors de la copie:', err);
+                    fallbackCopyTextToClipboard(textToCopy);
+                });
+            } else {
+                fallbackCopyTextToClipboard(textToCopy);
+            }
+        }
+
+        // Fallback pour la copie
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                const copyBtn = document.querySelector('.copy-btn');
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = 'Copié !';
+                copyBtn.style.background = '#107c10';
+                
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.style.background = '#605e5c';
+                }, 2000);
+            } catch (err) {
+                console.error('Fallback: Erreur lors de la copie', err);
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        // Initialiser l'application quand le DOM est chargé
+        document.addEventListener('DOMContentLoaded', () => {
+            new AdminConsentCallback();
+        });
+
+        // Gestion des messages du parent
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'close_consent_window') {
+                window.close();
+            }
+        });
+    </script>
+</body>
+</html>
